@@ -39,5 +39,8 @@
   "homepage": "https://github.com/LiteraryUniverse/cli#readme",
   "bugs": {
     "url": "https://github.com/LiteraryUniverse/cli/issues"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
   }
 }
