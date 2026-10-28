@@ -23,7 +23,7 @@
     "prepack": "npm run build"
   },
   "dependencies": {
-    "@literary-universe/sdk": "git+https://github.com/LiteraryUniverse/sdk-typescript.git#fc5046b6778af36f925a5b32a95f6f2f4f3f34cc",
+    "@literary-universe/sdk": "git+https://github.com/LiteraryUniverse/sdk-typescript.git#d87478a4b5d209a389f64b10a02d7f5bb6831a10",
     "sharp": "0.35.5"
   },
   "devDependencies": {
