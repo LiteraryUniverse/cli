@@ -45,7 +45,7 @@ test('CLI prepares local images without a key and refuses to replace originals o
 		const run = spawnSync(process.execPath, args, { encoding: 'utf8', env })
 		assert.equal(run.status, 0, run.stderr)
 		assert.equal(JSON.parse(run.stdout).policyVersion, '1')
-		assert.equal((await sharp(output).metadata()).hasAlpha, true)
+		assert.equal((await sharp(readFileSync(output)).metadata()).hasAlpha, true)
 		const again = spawnSync(process.execPath, args, { encoding: 'utf8', env })
 		assert.equal(again.status, 1)
 		const original = spawnSync(

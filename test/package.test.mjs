@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -37,7 +37,6 @@ function installArchive(folder, archive) {
 	const installed = runNpm(
 		[
 			'install',
-			'--offline',
 			'--ignore-scripts',
 			'--no-audit',
 			'--no-fund',
@@ -89,7 +88,7 @@ async function assertPreparation(folder, bytes) {
 	const result = installedCli(folder, preparationArgs(source, output))
 	assert.equal(result.status, 0, result.stderr)
 	assert.equal(JSON.parse(result.stdout).width, 10)
-	assert.equal((await sharp(output).metadata()).hasAlpha, true)
+	assert.equal((await sharp(readFileSync(output)).metadata()).hasAlpha, true)
 }
 async function assertCommonJs(folder, bytes) {
 	const require = createRequire(
