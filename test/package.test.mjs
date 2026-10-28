@@ -52,12 +52,24 @@ function assertHelp(folder) {
 	assert.match(result.stdout, /Literary Universe CLI/)
 }
 function assertInstalledBin(folder) {
-	const filename = process.platform === 'win32' ? 'lu.cmd' : 'lu'
+	const windows = process.platform === 'win32'
+	const filename = windows ? 'lu.ps1' : 'lu'
 	const bin = join(folder, 'node_modules', '.bin', filename)
-	const command = process.platform === 'win32' ? '"%LU_TEST_BIN%"' : bin
-	const result = spawnSync(command, ['--help'], {
+	// npm's .cmd shim leaves its directory assignment unquoted, breaking '&' paths.
+	const command = windows ? 'powershell.exe' : bin
+	const args = windows
+		? [
+				'-NoLogo',
+				'-NoProfile',
+				'-NonInteractive',
+				'-ExecutionPolicy',
+				'Bypass',
+				'-Command',
+				'& $env:LU_TEST_BIN --help; exit $LASTEXITCODE',
+			]
+		: ['--help']
+	const result = spawnSync(command, args, {
 		encoding: 'utf8',
-		shell: process.platform === 'win32',
 		env: { ...process.env, LU_TEST_BIN: bin },
 	})
 	assert.equal(result.status, 0, result.stderr)

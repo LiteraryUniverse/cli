@@ -13,6 +13,8 @@ and MIT licensing in the distributable package.
 The monorepo SDK contract workflow checks Node and Bun on Windows, macOS
 (Intel and Apple Silicon), and Linux. It exercises packed installs and the
 installed lu command from paths containing spaces, Unicode and ampersands.
+On Windows, this uses npm's PowerShell shim because its batch shim does not
+quote installation directories containing ampersands correctly.
 Native keystore checks use temporary deployment entries and remove them during
 cleanup. They require an available, unlocked OS store: set LU_TEST_NATIVE_KEYSTORE
 to 1 and run node --test test/credentials-native.test.mjs or bun test on that file.

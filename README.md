@@ -36,6 +36,10 @@ be installed in a separate project or globally.
 During development, run `npm run build`, then use `node dist/main.js` or
 `bun dist/main.js` in place of `lu`.
 
+If your Windows installation path contains `&`, use `lu.ps1` from PowerShell.
+npm's generated `lu.cmd` wrapper does not quote that path correctly. Running the
+installed `dist/main.js` directly with Node also works.
+
 ## Authentication and first pull
 
 Create a personal API key in your Literary Universe account. Reads need
