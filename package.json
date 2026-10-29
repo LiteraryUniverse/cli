@@ -26,8 +26,8 @@
     "sharp": "0.35.5"
   },
   "devDependencies": {
-    "typescript": "5.9.3",
-    "@types/node": "24.19.2"
+    "@types/node": "24.19.2",
+    "typescript": "5.9.3"
   },
   "bundleDependencies": [
     "@literary-universe/sdk"
@@ -39,8 +39,5 @@
   "homepage": "https://github.com/LiteraryUniverse/cli#readme",
   "bugs": {
     "url": "https://github.com/LiteraryUniverse/cli/issues"
-  },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
   }
 }
