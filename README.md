@@ -24,7 +24,7 @@ git clone https://github.com/LiteraryUniverse/cli.git
 cd cli
 npm ci
 npm pack
-npm install --global ./literary-universe-cli-0.1.0.tgz
+npm install --global ./literary-universe-cli-0.2.0.tgz
 lu --help
 ```
 
@@ -46,6 +46,12 @@ Create a personal API key in your Literary Universe account. Reads need
 `story:read`; saving or creating chapters also needs `story:write`. Publication
 requires the separate `story:publish` scope. Scopes do not grant access beyond
 your current permissions or the key's selected resources.
+
+An organization admin can instead create an organization key in the
+organization's settings. With work scopes it acts as the organization on the
+organization's own stories and universes, as an organization admin would, and
+on nothing else; with `organization:read` alone it only reads the public
+catalogue. Store it the same way.
 
 Supply LU_TOKEN for automation. For interactive use, lu auth store reads a key
 from that environment variable or stdin and saves it in the selected deployment's
@@ -137,6 +143,56 @@ The first original chapter publishes/schedules its story. Publish the parent
 universe separately in LU; a story credential does not change universe visibility.
 Revisions, listing updates and durable notification jobs commit together.
 Production also requires authorApi.publicationEnabled on the server.
+
+## Curation
+
+```sh
+lu story update STORY_ID --license cc-by-sa --universe UNIVERSE_ID
+lu story update STORY_ID --title "Title" --genres fantasy,myth --standalone
+lu story hide STORY_ID
+lu story show STORY_ID
+lu chapter rename CHAPTER_ID --title "Chapter One" [--language cs]
+lu chapter reorder STORY_ID --chapters ID3,ID1,ID2
+lu chapter remove CHAPTER_ID
+lu universe update UNIVERSE_ID --title "Title" --slug title --genre myth
+lu entries UNIVERSE_ID [--after CURSOR]
+lu entry ENTRY_ID [--language en]
+lu entry create UNIVERSE_ID --file entry.json
+lu entry update ENTRY_ID --file changes.json
+lu entry translate ENTRY_ID --language en --file translation.json
+lu entry publish|unpublish|delete ENTRY_ID
+lu series UNIVERSE_ID
+lu series save UNIVERSE_ID --title "Reading order" --stories ID1,ID2 --expected-version 0 [--series SERIES_ID]
+```
+
+Story and chapter changes need `story:write`; universe, encyclopedia and series
+changes need `universe:write`, translations `universe:translate`. Only the
+options you give change. Renames and reordering reach readers at once;
+`--chapters` lists every chapter exactly once. Only a chapter that was never
+published can be removed.
+A story whose arcs or free preview count chapters keeps its structure.
+
+Encyclopedia input is a JSON object, as the SDK's encyclopedia methods take it:
+
+```json
+{
+  "name": "Captain Nemo",
+  "categoryTitle": "Characters",
+  "summary": "Commander of the Nautilus.",
+  "fields": [{ "title": "Biography", "text": "Born a prince in India." }],
+  "relatedAdd": ["Nautilus"]
+}
+```
+
+New entries are drafts until `lu entry publish`. A taken name fails with
+CONFLICT. A translation names fields by their original titles and needs the
+universe translated into that language first. `lu series save` takes the
+version `lu series` reported, 0 for a new series, and fails with
+VERSION_CONFLICT when the series changed meanwhile.
+
+Every write prints its plan as JSON on stderr before sending it. Removals,
+deletions, entry creation and series saves are never retried; run them again
+only after checking the result.
 
 ## Development
 

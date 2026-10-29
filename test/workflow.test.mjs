@@ -61,7 +61,7 @@ async function fixture(t, second = false, pull = true) {
 		const request = JSON.parse(body)
 		state.requests.push(request)
 		assert.equal(req.headers.authorization, 'Bearer lu_test_fixture')
-		assert.equal(req.headers['x-lu-client'], 'lu-cli/0.1.0')
+		assert.equal(req.headers['x-lu-client'], 'lu-cli/0.2.0')
 		let result
 		if (request.operationName === 'LuChapters')
 			result = {
