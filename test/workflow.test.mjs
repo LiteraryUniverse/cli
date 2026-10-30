@@ -61,6 +61,8 @@ async function fixture(t, second = false, pull = true) {
 	const server = createServer(async (req, res) => {
 		let body = ''
 		for await (const chunk of req) body += chunk
+		// Port scanners (an IDE probing new local ports) send no body; ignore them.
+		if (!body) return res.end()
 		const request = JSON.parse(body)
 		state.requests.push(request)
 		assert.equal(req.headers.authorization, 'Bearer lu_test_fixture')
@@ -364,4 +366,25 @@ test('CLI refuses manifest traversal and deployment changes before sending crede
 		JSON.parse((await run(['status', '--directory', folder])).stderr).code,
 		'INVALID_PROJECT',
 	)
+})
+
+test('CLI reports which form changed and refuses a chapter edited in both forms', async (t) => {
+	const { folder, file, run, state } = await fixture(t)
+	const markdown = join(folder, 'chapters', '001-chapter.en.md')
+	assert.ok(existsSync(markdown))
+	writeFileSync(file, JSON.stringify(document('JSON edit.')))
+	assert.equal(
+		JSON.parse((await run(['status', '--directory', folder])).stdout)[0].source,
+		'json',
+	)
+	writeFileSync(markdown, `${readFileSync(markdown, 'utf8')}\nMarkdown edit.\n`)
+	assert.equal(
+		JSON.parse((await run(['status', '--directory', folder])).stdout)[0].source,
+		'both',
+	)
+	const push = await run(['push', '--directory', folder])
+	assert.equal(push.code, 1)
+	assert.equal(JSON.parse(push.stdout)[0].code, 'AMBIGUOUS_CHANGE')
+	assert.match(push.stderr, /"event":"ambiguous-change"/)
+	assert.equal(state.writes, 0)
 })
