@@ -30,7 +30,7 @@ For each scene or chapter, check:
 - Separate errors, questions and optional craft choices. A deliberate repetition, an exposition block or slow character growth may be the author's intent; ask before calling it a fault.
 - Describe what the manuscript communicates, then what the author's notes say they intended. Report the gap, not a guess at the fix.
 - Suggest revision priorities. Do not draft replacement prose, scenes or dialogue unless the author asks for it.
-- Note what you did not read. Partial coverage is a result, not an apology.
+- Note what you did not read.
 
 ## Never
 
