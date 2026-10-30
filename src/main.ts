@@ -10,6 +10,7 @@ import {
 	localProjectStatus,
 	pullLocalProject,
 	pushLocalProject,
+	refreshLocalProject,
 } from '@literary-universe/sdk/project'
 import {
 	loadKey,
@@ -21,8 +22,9 @@ import {
 import { curationCommand } from './curation.js'
 import { imageCommand } from './images.js'
 import { login, revokeSession } from './oauth.js'
+import { initWorkspace } from './workspace.js'
 
-const help = `Literary Universe CLI\n\nlu identity|profile|stories|universes\nlu story|universe|draft <id>\nlu chapters <story-id> [--language <locale>]\nlu pull <story-id> --directory <new-folder> [--language <locale>]\nlu status [--directory <folder>]\nlu push [--directory <folder>]\nlu save <chapter-id> --file <tiptap.json> --expected-version <version> --operation-id <id>\nlu recovery <chapter-id> --recovery-id <id>\nlu create <story-id> --operation-id <id> [--title <title>] [--file <tiptap.json>]\nlu publish <chapter-id> --expected-version <version> --operation-id <id> [--at <ISO-time>] [--audience readers|beta]\nlu image policy\nlu image prepare --file <source> --purpose <purpose> --output <new-file> [--crop x,y,w,h]\nlu image upload <target-id> --file <prepared> --purpose <purpose> --policy-version <version> --operation-id <id>\nlu image cover story|universe <id> --file <image>\nlu story update <story-id> [--title <t>] [--description <d>] [--genres <a,b>] [--tags <a,b>] [--rating <r>] [--license <l>] [--language <locale>] [--universe <id>|--standalone]\nlu story hide|show <story-id>\nlu chapter rename <chapter-id> --title <title> [--language <locale>]\nlu chapter remove <chapter-id>\nlu chapter reorder <story-id> --chapters <id,id,...>\nlu universe update <universe-id> [--title <t>] [--slug <s>] [--description <d>] [--genre <g>] [--rating <r>] [--license <l>] [--language <locale>]\nlu entries <universe-id> [--after <cursor>]\nlu entry <entry-id> [--language <locale>]\nlu entry create <universe-id> --file <entry.json>\nlu entry update <entry-id> --file <changes.json>\nlu entry translate <entry-id> --language <locale> --file <translation.json>\nlu entry publish|unpublish|delete <entry-id>\nlu series <universe-id>\nlu series save <universe-id> --title <t> --stories <id,id,...> --expected-version <n> [--series <id>]\nlu auth store|remove\nlu login|logout [--url <deployment>]\n\nlu login signs in through the browser and keeps a refreshable session in the\nOS credential store. Set LU_TOKEN or provide a key through stdin to lu auth store. Keys are stored\nin the OS credential store for the selected deployment. Select it with --url\nor LU_BASE_URL. Output is JSON. Stripe settings are managed on the web.\n`
+const help = `Literary Universe CLI\n\nlu identity|profile|stories|universes\nlu story|universe|draft <id>\nlu chapters <story-id> [--language <locale>]\nlu pull <story-id> --directory <new-folder> [--language <locale>]\nlu init <story-id> --directory <new-folder> [--language <locale>]\nlu refresh [--directory <folder>]\nlu status [--directory <folder>]\nlu push [--directory <folder>]\nlu save <chapter-id> --file <tiptap.json> --expected-version <version> --operation-id <id>\nlu recovery <chapter-id> --recovery-id <id>\nlu create <story-id> --operation-id <id> [--title <title>] [--file <tiptap.json>]\nlu publish <chapter-id> --expected-version <version> --operation-id <id> [--at <ISO-time>] [--audience readers|beta]\nlu image policy\nlu image prepare --file <source> --purpose <purpose> --output <new-file> [--crop x,y,w,h]\nlu image upload <target-id> --file <prepared> --purpose <purpose> --policy-version <version> --operation-id <id>\nlu image cover story|universe <id> --file <image>\nlu story update <story-id> [--title <t>] [--description <d>] [--genres <a,b>] [--tags <a,b>] [--rating <r>] [--license <l>] [--language <locale>] [--universe <id>|--standalone]\nlu story hide|show <story-id>\nlu chapter rename <chapter-id> --title <title> [--language <locale>]\nlu chapter remove <chapter-id>\nlu chapter reorder <story-id> --chapters <id,id,...>\nlu universe update <universe-id> [--title <t>] [--slug <s>] [--description <d>] [--genre <g>] [--rating <r>] [--license <l>] [--language <locale>]\nlu entries <universe-id> [--after <cursor>]\nlu entry <entry-id> [--language <locale>]\nlu entry create <universe-id> --file <entry.json>\nlu entry update <entry-id> --file <changes.json>\nlu entry translate <entry-id> --language <locale> --file <translation.json>\nlu entry publish|unpublish|delete <entry-id>\nlu series <universe-id>\nlu series save <universe-id> --title <t> --stories <id,id,...> --expected-version <n> [--series <id>]\nlu auth store|remove\nlu login|logout [--url <deployment>]\n\nlu login signs in through the browser and keeps a refreshable session in the\nOS credential store. Set LU_TOKEN or provide a key through stdin to lu auth store. Keys are stored\nin the OS credential store for the selected deployment. Select it with --url\nor LU_BASE_URL. Output is JSON. Stripe settings are managed on the web.\n`
 
 const options = {
 	url: { type: 'string' },
@@ -221,6 +223,16 @@ async function dispatch(client: LiteraryUniverseClient, args: Args) {
 				language: args.values.language,
 			}),
 		)
+	else if (command === 'init')
+		output(
+			await initWorkspace(client, {
+				...args,
+				directory: required(args.values.directory),
+				storyId: required(args.positionals[1]),
+				language: args.values.language,
+			}),
+		)
+	else if (command === 'refresh') output(await refreshLocalProject(client, args))
 	else if (command === 'push') await push(client, args)
 	else if (command === 'save') await save(client, args)
 	else if (command === 'image') output(await imageCommand(client, args))
