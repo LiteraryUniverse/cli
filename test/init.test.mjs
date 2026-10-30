@@ -61,7 +61,9 @@ async function fixture(t) {
 		if (!body) return res.end()
 		res.setHeader('Content-Type', 'application/json')
 		res.end(
-			JSON.stringify({ data: { result: results[JSON.parse(body).operationName] } }),
+			JSON.stringify({
+				data: { result: results[JSON.parse(body).operationName] },
+			}),
 		)
 	})
 	await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
@@ -116,14 +118,26 @@ test('lu init pulls the story and writes the agent workspace once', async (t) =>
 		permissions: { allow: ['Bash(lu status)'] },
 		enabledMcpjsonServers: ['literary-universe'],
 	})
-	assert.match(read('.codex/config.toml'), /^\[mcp_servers\.literary-universe\]\ncommand = "lu"\nargs = \["mcp"\]\n$/)
+	assert.match(
+		read('.codex/config.toml'),
+		/^\[mcp_servers\.literary-universe\]\ncommand = "lu"\nargs = \["mcp"\]\n$/,
+	)
 	assert.equal(read('.gitignore'), '.lu/lock\n')
-	assert.match(read('.claude/skills/story-review/SKILL.md'), /^---\nname: story-review\n/)
+	assert.match(
+		read('.claude/skills/story-review/SKILL.md'),
+		/^---\nname: story-review\n/,
+	)
 	assert.ok(existsSync(join(folder, 'chapters', 'chapter-chapter.en.json')))
-	const log = execFileSync('git', ['log', '--oneline'], { cwd: folder, encoding: 'utf8' })
+	const log = execFileSync('git', ['log', '--oneline'], {
+		cwd: folder,
+		encoding: 'utf8',
+	})
 	assert.match(log, /Initial import from Literary Universe/)
 	assert.ok(
-		!execFileSync('git', ['ls-files'], { cwd: folder, encoding: 'utf8' }).includes('.lu/lock'),
+		!execFileSync('git', ['ls-files'], {
+			cwd: folder,
+			encoding: 'utf8',
+		}).includes('.lu/lock'),
 	)
 
 	writeFileSync(join(folder, 'AGENTS.md'), 'Mine.\n')
@@ -135,5 +149,8 @@ test('lu init pulls the story and writes the agent workspace once', async (t) =>
 
 	const other = await run(['init', 'another', '--directory', folder])
 	assert.equal(other.code, 1)
-	assert.equal(JSON.parse(other.stderr.trim().split('\n').at(-1)).code, 'INVALID_PROJECT')
+	assert.equal(
+		JSON.parse(other.stderr.trim().split('\n').at(-1)).code,
+		'INVALID_PROJECT',
+	)
 })

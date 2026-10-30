@@ -39,7 +39,10 @@ test('lu mcp serves the selected tools over stdio with annotations', async (t) =
 })
 
 test('lu mcp reads LU_MCP_TOOLS and reports a missing login per call', async (t) => {
-	const { client } = await connect(t, [], { LU_MCP_TOOLS: 'account', LU_TOKEN: '' })
+	const { client } = await connect(t, [], {
+		LU_MCP_TOOLS: 'account',
+		LU_TOKEN: '',
+	})
 	const { tools } = await client.listTools()
 	assert.deepEqual(
 		tools.map((tool) => tool.name),

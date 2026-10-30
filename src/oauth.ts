@@ -1,6 +1,10 @@
 import { spawn } from 'node:child_process'
 import { createHash, randomBytes } from 'node:crypto'
-import { createServer } from 'node:http'
+import {
+	createServer,
+	type IncomingMessage,
+	type ServerResponse,
+} from 'node:http'
 import { LiteraryUniverseApiError } from '@literary-universe/sdk'
 
 export type Session = {
@@ -27,6 +31,15 @@ const canonical = (baseUrl: string) => {
 	return `${url.origin}${url.pathname.replace(/\/+$/, '')}`
 }
 
+function oauthError(status: number, json: Record<string, string>) {
+	return new LiteraryUniverseApiError(
+		(json.error ?? 'OAUTH_ERROR').toUpperCase(),
+		json.error_description ?? 'The deployment refused the OAuth request',
+		undefined,
+		status,
+	)
+}
+
 async function oauthFetch<T>(
 	url: string,
 	body: Record<string, string | string[]>,
@@ -38,17 +51,8 @@ async function oauthFetch<T>(
 		body: JSON.stringify(body),
 		signal,
 	})
-	const json = (await response.json().catch(() => ({}))) as {
-		error?: string
-		error_description?: string
-	}
-	if (!response.ok)
-		throw new LiteraryUniverseApiError(
-			(json.error ?? 'OAUTH_ERROR').toUpperCase(),
-			json.error_description ?? 'The deployment refused the OAuth request',
-			undefined,
-			response.status,
-		)
+	const json = await response.json().catch(() => ({}))
+	if (!response.ok) throw oauthError(response.status, json)
 	return json as T
 }
 
@@ -101,30 +105,45 @@ export async function revokeSession(baseUrl: string, current: Session) {
 
 const page =
 	'<!doctype html><title>Literary Universe</title><p>Signed in. You can close this window.</p>'
+type Callback = {
+	resolve: (code: string) => void
+	reject: (error: Error) => void
+}
+/** Answers the browser's redirect; a wrong state or path is ignored. */
+function callbackHandler(state: string, { resolve, reject }: Callback) {
+	return (request: IncomingMessage, response: ServerResponse) => {
+		const url = new URL(request.url ?? '/', 'http://127.0.0.1')
+		if (url.pathname !== '/callback' || url.searchParams.get('state') !== state)
+			return response.writeHead(404).end()
+		response.writeHead(200, { 'Content-Type': 'text/html' }).end(page)
+		const code = url.searchParams.get('code')
+		if (code) return resolve(code)
+		reject(
+			new LiteraryUniverseApiError(
+				(url.searchParams.get('error') ?? 'ACCESS_DENIED').toUpperCase(),
+				url.searchParams.get('error_description') ?? 'Sign-in was denied',
+			),
+		)
+	}
+}
+
 /** Binds the loopback redirect first so the registered URI carries the real port (RFC 8252 §7.3). */
 function listen(state: string) {
 	const server = createServer()
 	const code = new Promise<string>((resolve, reject) => {
 		const timer = setTimeout(
-			() => reject(new LiteraryUniverseApiError('TIMEOUT', 'Sign-in timed out')),
+			() =>
+				reject(new LiteraryUniverseApiError('TIMEOUT', 'Sign-in timed out')),
 			LOGIN_TIMEOUT_MS,
 		)
-		server.on('request', (request, response) => {
-			const url = new URL(request.url ?? '/', 'http://127.0.0.1')
-			if (url.pathname !== '/callback' || url.searchParams.get('state') !== state)
-				return response.writeHead(404).end()
-			response.writeHead(200, { 'Content-Type': 'text/html' }).end(page)
+		const settle = (value: string | Error) => {
 			clearTimeout(timer)
-			const received = url.searchParams.get('code')
-			if (received) resolve(received)
-			else
-				reject(
-					new LiteraryUniverseApiError(
-						(url.searchParams.get('error') ?? 'ACCESS_DENIED').toUpperCase(),
-						url.searchParams.get('error_description') ?? 'Sign-in was denied',
-					),
-				)
-		})
+			return value instanceof Error ? reject(value) : resolve(value)
+		}
+		server.on(
+			'request',
+			callbackHandler(state, { resolve: settle, reject: settle }),
+		)
 	})
 	const port = new Promise<number>((resolve) =>
 		server.listen(0, '127.0.0.1', () => {
@@ -158,6 +177,29 @@ async function register(metadata: Metadata, redirectUri: string) {
 	return client.client_id
 }
 
+function authorizeUrl(
+	metadata: Metadata,
+	params: {
+		clientId: string
+		redirectUri: string
+		state: string
+		verifier: string
+	},
+) {
+	const url = new URL(metadata.authorization_endpoint)
+	url.search = new URLSearchParams({
+		response_type: 'code',
+		client_id: params.clientId,
+		redirect_uri: params.redirectUri,
+		state: params.state,
+		code_challenge: base64url(
+			createHash('sha256').update(params.verifier).digest(),
+		),
+		code_challenge_method: 'S256',
+	}).toString()
+	return url.href
+}
+
 export async function login(baseUrl: string): Promise<Session> {
 	const metadata = await discover(baseUrl)
 	const state = base64url(randomBytes(16))
@@ -166,20 +208,12 @@ export async function login(baseUrl: string): Promise<Session> {
 	try {
 		const redirectUri = `http://127.0.0.1:${await callback.port}/callback`
 		const clientId = await register(metadata, redirectUri)
-		const url = new URL(metadata.authorization_endpoint)
-		url.search = new URLSearchParams({
-			response_type: 'code',
-			client_id: clientId,
-			redirect_uri: redirectUri,
-			state,
-			code_challenge: base64url(createHash('sha256').update(verifier).digest()),
-			code_challenge_method: 'S256',
-		}).toString()
-		openBrowser(url.href)
-		const code = await callback.code
+		openBrowser(
+			authorizeUrl(metadata, { clientId, redirectUri, state, verifier }),
+		)
 		const token = await oauthFetch<TokenResponse>(metadata.token_endpoint, {
 			grant_type: 'authorization_code',
-			code,
+			code: await callback.code,
 			client_id: clientId,
 			redirect_uri: redirectUri,
 			code_verifier: verifier,

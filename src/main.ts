@@ -262,7 +262,8 @@ async function dispatch(client: LiteraryUniverseClient, args: Args) {
 				language: args.values.language,
 			}),
 		)
-	else if (command === 'refresh') output(await refreshLocalProject(client, args))
+	else if (command === 'refresh')
+		output(await refreshLocalProject(client, args))
 	else if (command === 'push') await push(client, args)
 	else if (command === 'save') await save(client, args)
 	else if (command === 'image') output(await imageCommand(client, args))

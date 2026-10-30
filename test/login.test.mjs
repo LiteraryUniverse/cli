@@ -87,7 +87,8 @@ function oauthServer(state) {
 			res.writeHead(302, { Location: back.href })
 			return res.end()
 		}
-		if (url.pathname === '/oauth/token') return token(state, JSON.parse(body), json)
+		if (url.pathname === '/oauth/token')
+			return token(state, JSON.parse(body), json)
 		if (url.pathname === '/oauth/revoke') {
 			state.revoked.push(JSON.parse(body))
 			return json(200, {})
@@ -123,7 +124,10 @@ function token(state, body, json) {
 	}
 	if (body.grant_type === 'refresh_token') {
 		state.refreshes.push(body.refresh_token)
-		if (body.refresh_token !== state.refreshToken || body.client_id !== 'client-1')
+		if (
+			body.refresh_token !== state.refreshToken ||
+			body.client_id !== 'client-1'
+		)
 			return json(400, { error: 'invalid_grant', error_description: 'Reused' })
 		return json(200, grant())
 	}
@@ -156,7 +160,9 @@ async function fixture(t) {
 	const stored = () =>
 		Object.values(JSON.parse(readFileSync(env.LU_TEST_STORE, 'utf8')))
 	const setSession = (session) => {
-		const [profile] = Object.keys(JSON.parse(readFileSync(env.LU_TEST_STORE, 'utf8')))
+		const [profile] = Object.keys(
+			JSON.parse(readFileSync(env.LU_TEST_STORE, 'utf8')),
+		)
 		writeFileSync(
 			env.LU_TEST_STORE,
 			JSON.stringify({ [profile]: JSON.stringify(session) }),
@@ -177,7 +183,10 @@ test('lu login registers the runtime loopback URL, proves PKCE and stores a sess
 	assert.equal(read('LU_TEST_FORGED'), '404')
 	assert.match(read('LU_TEST_PAGE'), /close this window/)
 	assert.match(login.stderr, /Open this URL to sign in:\nhttp:\/\/127\.0\.0\.1/)
-	assert.match(state.registration.redirect_uris[0], /^http:\/\/127\.0\.0\.1:\d+\/callback$/)
+	assert.match(
+		state.registration.redirect_uris[0],
+		/^http:\/\/127\.0\.0\.1:\d+\/callback$/,
+	)
 	assert.equal(state.registration.client_name, 'Literary Universe CLI')
 	assert.equal(state.authorize.code_challenge_method, 'S256')
 	const [session] = stored().map((value) => JSON.parse(value))
@@ -208,7 +217,10 @@ test('lu login registers the runtime loopback URL, proves PKCE and stores a sess
 	setSession({ ...session, accessExpiresAt: new Date().toISOString() })
 	const reused = await run('identity')
 	assert.equal(reused.code, 1)
-	assert.equal(JSON.parse(reused.stderr.trim().split('\n').at(-1)).code, 'INVALID_GRANT')
+	assert.equal(
+		JSON.parse(reused.stderr.trim().split('\n').at(-1)).code,
+		'INVALID_GRANT',
+	)
 
 	setSession(JSON.parse(stored()[0]))
 	const logout = await run('logout')

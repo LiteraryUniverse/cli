@@ -27,7 +27,12 @@ const codexConfig =
 
 type Written = string[]
 /** Writes only when the file is absent; the author's own edits stay. */
-function writeNew(root: string, file: string, content: string, written: Written) {
+function writeNew(
+	root: string,
+	file: string,
+	content: string,
+	written: Written,
+) {
 	const path = join(root, file)
 	if (existsSync(path)) return
 	mkdirSync(dirname(path), { recursive: true })
@@ -81,10 +86,7 @@ function initGit(root: string) {
 	}
 }
 
-async function ensureProject(
-	client: LiteraryUniverseClient,
-	input: InitInput,
-) {
+async function ensureProject(client: LiteraryUniverseClient, input: InitInput) {
 	if (!existsSync(join(input.directory, '.lu', 'project.json')))
 		return pullLocalProject(client, input)
 	const project = readLocalProject(input.directory)
@@ -116,7 +118,12 @@ export async function initWorkspace(
 		.replaceAll('{{id}}', input.storyId)
 	writeNew(root, 'AGENTS.md', agents, written)
 	writeNew(root, 'CLAUDE.md', '@AGENTS.md\n', written)
-	writeNew(root, '.mcp.json', `${JSON.stringify(mcpConfig, null, 2)}\n`, written)
+	writeNew(
+		root,
+		'.mcp.json',
+		`${JSON.stringify(mcpConfig, null, 2)}\n`,
+		written,
+	)
 	approveMcpServer(root, written)
 	writeNew(root, '.codex/config.toml', codexConfig, written)
 	writeNew(root, '.gitignore', '.lu/lock\n', written)
