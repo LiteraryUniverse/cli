@@ -45,16 +45,19 @@ async function fixture(t, second = false, pull = true) {
 		draft: {
 			id: 'chapter',
 			storyId: 'story',
+			sequence: 1,
+			title: 'Chapter',
 			language: 'en',
 			version: 'v1',
 			content: document('Original.'),
+			markdown: 'Original.',
 		},
 		writes: 0,
 		dropReply: false,
 		operations: new Map(),
 		requests: [],
 	}
-	if (second) state.second = { ...state.draft, id: 'second' }
+	if (second) state.second = { ...state.draft, id: 'second', sequence: 2 }
 	const server = createServer(async (req, res) => {
 		let body = ''
 		for await (const chunk of req) body += chunk
