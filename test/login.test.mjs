@@ -57,6 +57,12 @@ function command(args, env, timeout = 20_000) {
 }
 const sha256 = (value) => createHash('sha256').update(value).digest('base64url')
 
+/** OAuth token and revocation endpoints accept only form bodies (RFC 6749 §3.2). */
+function formBody(req, body) {
+	assert.equal(req.headers['content-type'], 'application/x-www-form-urlencoded')
+	return Object.fromEntries(new URLSearchParams(body))
+}
+
 function oauthServer(state) {
 	return createServer(async (req, res) => {
 		let body = ''
@@ -91,10 +97,10 @@ function oauthServer(state) {
 		if (url.pathname === '/oauth/token') {
 			if (state.tokenDelay)
 				await new Promise((resolve) => setTimeout(resolve, state.tokenDelay))
-			return token(state, JSON.parse(body), json)
+			return token(state, formBody(req, body), json)
 		}
 		if (url.pathname === '/oauth/revoke') {
-			state.revoked.push(JSON.parse(body))
+			state.revoked.push(formBody(req, body))
 			return json(200, {})
 		}
 		if (url.pathname === '/graphql') {

@@ -42,13 +42,13 @@ function oauthError(status: number, json: Record<string, string>) {
 
 async function oauthFetch<T>(
 	url: string,
-	body: Record<string, string | string[]>,
+	body: Record<string, string>,
 	signal?: AbortSignal,
 ) {
 	const response = await fetch(url, {
 		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify(body),
+		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+		body: new URLSearchParams(body),
 		signal,
 	})
 	const json = await response.json().catch(() => ({}))
@@ -180,11 +180,17 @@ function openBrowser(url: string) {
 }
 
 async function register(metadata: Metadata, redirectUri: string) {
-	const client = await oauthFetch<{ client_id: string }>(
-		metadata.registration_endpoint,
-		{ client_name: 'Literary Universe CLI', redirect_uris: [redirectUri] },
-	)
-	return client.client_id
+	const response = await fetch(metadata.registration_endpoint, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({
+			client_name: 'Literary Universe CLI',
+			redirect_uris: [redirectUri],
+		}),
+	})
+	const json = await response.json().catch(() => ({}))
+	if (!response.ok) throw oauthError(response.status, json)
+	return (json as { client_id: string }).client_id
 }
 
 function authorizeUrl(
