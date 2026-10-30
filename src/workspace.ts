@@ -19,11 +19,6 @@ import {
 
 // dist/workspace.js → the package root, where templates/ and skills/ ship.
 const assets = fileURLToPath(new URL('../', import.meta.url))
-const mcpConfig = {
-	mcpServers: { 'literary-universe': { command: 'lu', args: ['mcp'] } },
-}
-const codexConfig =
-	'[mcp_servers.literary-universe]\ncommand = "lu"\nargs = ["mcp"]\n'
 
 type Written = string[]
 /** Writes only when the file is absent; the author's own edits stay. */
@@ -90,6 +85,12 @@ async function ensureProject(client: LiteraryUniverseClient, input: InitInput) {
 	if (!existsSync(join(input.directory, '.lu', 'project.json')))
 		return pullLocalProject(client, input)
 	const project = readLocalProject(input.directory)
+	const url = new URL(input.baseUrl)
+	if (project.baseUrl !== `${url.origin}${url.pathname.replace(/\/+$/, '')}`)
+		throw new LiteraryUniverseApiError(
+			'DEPLOYMENT_MISMATCH',
+			'This folder belongs to a different deployment',
+		)
 	if (project.storyId !== input.storyId)
 		throw new LiteraryUniverseApiError(
 			'INVALID_PROJECT',
@@ -113,6 +114,11 @@ export async function initWorkspace(
 	const title = story?.title ?? input.storyId
 	const root = input.directory
 	const written: Written = []
+	const args = ['mcp', '--url', input.baseUrl]
+	const mcpConfig = {
+		mcpServers: { 'literary-universe': { command: 'lu', args } },
+	}
+	const codexConfig = `[mcp_servers.literary-universe]\ncommand = "lu"\nargs = ${JSON.stringify(args)}\n`
 	const agents = readFileSync(join(assets, 'templates', 'AGENTS.md'), 'utf8')
 		.replaceAll('{{title}}', title)
 		.replaceAll('{{id}}', input.storyId)

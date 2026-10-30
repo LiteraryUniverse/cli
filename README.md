@@ -61,6 +61,11 @@ it. `lu logout` revokes the session and removes it locally. Set `LU_BROWSER`
 (or `BROWSER`) to a command that should receive the URL instead of the system
 opener.
 
+Concurrent CLI commands and MCP calls share a deployment-specific refresh lock.
+The lock contains only the owner's process ID. If a process is force-killed
+while refreshing, later calls report `AUTH_BUSY` with the lock path. Check its
+`pid` file and remove the lock only after confirming that no LU process owns it.
+
 API keys still work and suit automation. Create a personal API key in your Literary Universe account. Reads need
 `story:read`; saving or creating chapters also needs `story:write`. Publication
 requires the separate `story:publish` scope. Scopes do not grant access beyond
@@ -133,7 +138,10 @@ claude        # or codex, or open the folder in T3 Code
 
 The folder becomes a git repository with an initial commit when `git` is
 available and it is not already inside one. Running `lu init` again never
-overwrites an existing file; the report lists what was written.
+overwrites an existing file; the report lists what was written. Both generated
+MCP configurations include the deployment selected by `--url` or `LU_BASE_URL`.
+For existing configurations, include `--url <deployment>` in the `lu mcp`
+arguments. Use that same option for CLI commands in the workspace.
 
 Agent setup:
 

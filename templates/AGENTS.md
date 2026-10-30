@@ -16,6 +16,10 @@ their writing.
 
 ## Working loop
 
+For every CLI command below, append `--url` with the deployment URL in the
+`literary-universe` server's arguments in `.mcp.json`, even when `LU_BASE_URL`
+is set. The MCP server already includes this option.
+
 1. `lu refresh` before starting work, so the drafts match the server.
 2. `lu status` to see which chapters changed locally and in which form.
 3. Edit the Markdown files.

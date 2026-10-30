@@ -130,8 +130,9 @@ function callbackHandler(state: string, { resolve, reject }: Callback) {
 /** Binds the loopback redirect first so the registered URI carries the real port (RFC 8252 §7.3). */
 function listen(state: string) {
 	const server = createServer()
+	let timer: ReturnType<typeof setTimeout>
 	const code = new Promise<string>((resolve, reject) => {
-		const timer = setTimeout(
+		timer = setTimeout(
 			() =>
 				reject(new LiteraryUniverseApiError('TIMEOUT', 'Sign-in timed out')),
 			LOGIN_TIMEOUT_MS,
@@ -145,13 +146,22 @@ function listen(state: string) {
 			callbackHandler(state, { resolve: settle, reject: settle }),
 		)
 	})
-	const port = new Promise<number>((resolve) =>
+	code.catch(() => {})
+	const port = new Promise<number>((resolve, reject) => {
+		server.once('error', reject)
 		server.listen(0, '127.0.0.1', () => {
 			const address = server.address()
 			resolve(typeof address === 'object' && address ? address.port : 0)
-		}),
-	)
-	return { code, port, close: () => server.close() }
+		})
+	})
+	return {
+		code,
+		port,
+		close: () => {
+			clearTimeout(timer)
+			server.close()
+		},
+	}
 }
 
 function openBrowser(url: string) {

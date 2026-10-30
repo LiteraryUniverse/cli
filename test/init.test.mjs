@@ -82,11 +82,17 @@ async function fixture(t) {
 	}
 	const folder = join(root, 'workspace')
 	const read = (file) => readFileSync(join(folder, file), 'utf8')
-	return { folder, read, run: (args) => command(args, env) }
+	return {
+		folder,
+		read,
+		baseUrl: env.LU_BASE_URL,
+		run: (args) => command(args, env),
+		env,
+	}
 }
 
 test('lu init pulls the story and writes the agent workspace once', async (t) => {
-	const { folder, read, run } = await fixture(t)
+	const { folder, read, run, baseUrl } = await fixture(t)
 	mkdirSync(join(folder, '.claude'), { recursive: true })
 	writeFileSync(
 		join(folder, '.claude', 'settings.json'),
@@ -112,15 +118,17 @@ test('lu init pulls the story and writes the agent workspace once', async (t) =>
 	assert.ok(!read('AGENTS.md').includes('{{'))
 	assert.equal(read('CLAUDE.md'), '@AGENTS.md\n')
 	assert.deepEqual(JSON.parse(read('.mcp.json')), {
-		mcpServers: { 'literary-universe': { command: 'lu', args: ['mcp'] } },
+		mcpServers: {
+			'literary-universe': { command: 'lu', args: ['mcp', '--url', baseUrl] },
+		},
 	})
 	assert.deepEqual(JSON.parse(read('.claude/settings.json')), {
 		permissions: { allow: ['Bash(lu status)'] },
 		enabledMcpjsonServers: ['literary-universe'],
 	})
-	assert.match(
+	assert.equal(
 		read('.codex/config.toml'),
-		/^\[mcp_servers\.literary-universe\]\ncommand = "lu"\nargs = \["mcp"\]\n$/,
+		`[mcp_servers.literary-universe]\ncommand = "lu"\nargs = ["mcp","--url",${JSON.stringify(baseUrl)}]\n`,
 	)
 	assert.equal(read('.gitignore'), '.lu/lock\n')
 	assert.match(
@@ -153,4 +161,30 @@ test('lu init pulls the story and writes the agent workspace once', async (t) =>
 		JSON.parse(other.stderr.trim().split('\n').at(-1)).code,
 		'INVALID_PROJECT',
 	)
+})
+
+test('lu init binds agent configs to --url without an inherited deployment', async (t) => {
+	const { folder, read, baseUrl, env } = await fixture(t)
+	delete env.LU_BASE_URL
+	const result = await command(
+		['init', 'story', '--directory', folder, '--url', baseUrl],
+		env,
+	)
+	assert.equal(result.code, 0, result.stderr)
+	const { args } = JSON.parse(read('.mcp.json')).mcpServers['literary-universe']
+	assert.deepEqual(args, ['mcp', '--url', baseUrl])
+	assert.ok(read('.codex/config.toml').includes(JSON.stringify(baseUrl)))
+	assert.match(read('AGENTS.md'), /append `--url`/)
+	assert.match(read('AGENTS.md'), /\.mcp\.json/)
+	const refresh = await command(
+		['refresh', '--directory', folder, ...args.slice(1)],
+		env,
+	)
+	assert.equal(refresh.code, 0, refresh.stderr)
+	const wrong = await command(
+		['init', 'story', '--directory', folder, '--url', `${baseUrl}/other`],
+		env,
+	)
+	assert.equal(wrong.code, 1)
+	assert.equal(JSON.parse(wrong.stderr).code, 'DEPLOYMENT_MISMATCH')
 })

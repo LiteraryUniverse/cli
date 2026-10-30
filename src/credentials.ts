@@ -1,5 +1,9 @@
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { homedir, hostname } from 'node:os'
+import { join } from 'node:path'
+import { setTimeout as delay } from 'node:timers/promises'
 import { LiteraryUniverseApiError } from '@literary-universe/sdk'
 import { refreshSession, type Session } from './oauth.js'
 
@@ -112,18 +116,74 @@ const invalidKey = () =>
 		'A valid LU API key is required',
 	)
 
-/** A raw key (LU_TOKEN or lu auth store) or a login session, refreshed when it is about to expire. */
-export async function loadKey(baseUrl: string, signal?: AbortSignal) {
-	const fromEnv = process.env.LU_TOKEN
-	const value = fromEnv ?? keyring('read', baseUrl)
+async function refreshLock(baseUrl: string, signal?: AbortSignal) {
+	const parent = join(homedir(), '.literary-universe', 'auth-locks', hostname())
+	mkdirSync(parent, { recursive: true, mode: 0o700 })
+	const path = join(parent, profile(baseUrl))
+	const waiting = AbortSignal.any([
+		...(signal ? [signal] : []),
+		AbortSignal.timeout(30_000),
+	])
+	while (true) {
+		waiting.throwIfAborted()
+		try {
+			mkdirSync(path, { mode: 0o700 })
+			break
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error
+		}
+		try {
+			await delay(50, undefined, { signal: waiting })
+		} catch {
+			if (signal?.aborted) signal.throwIfAborted()
+			throw new LiteraryUniverseApiError(
+				'AUTH_BUSY',
+				`Another process is refreshing credentials. If no LU process is running, remove the stale lock at ${path}`,
+			)
+		}
+	}
+	const release = () => rmSync(path, { recursive: true, force: true })
+	try {
+		writeFileSync(join(path, 'pid'), String(process.pid), { mode: 0o600 })
+	} catch (error) {
+		release()
+		throw error
+	}
+	process.once('exit', release)
+	return () => {
+		process.removeListener('exit', release)
+		release()
+	}
+}
+
+const fresh = (session: Session) =>
+	Date.parse(session.accessExpiresAt) - Date.now() > REFRESH_AHEAD_MS
+
+async function refreshedKey(baseUrl: string, signal?: AbortSignal) {
+	const value = process.env.LU_TOKEN ?? keyring('read', baseUrl)
 	if (validKey(value)) return value
 	const session = parseSession(value)
 	if (!session) throw invalidKey()
-	if (Date.parse(session.accessExpiresAt) - Date.now() > REFRESH_AHEAD_MS)
-		return session.accessToken
+	if (fresh(session)) return session.accessToken
 	const refreshed = await refreshSession(baseUrl, session, signal)
-	if (!fromEnv) storeSession(baseUrl, refreshed)
+	if (!process.env.LU_TOKEN) storeSession(baseUrl, refreshed)
 	return refreshed.accessToken
+}
+
+/** A raw key or a login session, refreshed under a deployment-scoped process lock. */
+export async function loadKey(baseUrl: string, signal?: AbortSignal) {
+	const value = process.env.LU_TOKEN ?? keyring('read', baseUrl)
+	if (validKey(value)) return value
+	const session = parseSession(value)
+	if (!session) throw invalidKey()
+	if (fresh(session)) return session.accessToken
+	const release = await refreshLock(baseUrl, signal)
+	try {
+		// Re-read after acquiring the lock; another process may have rotated it.
+		return await refreshedKey(baseUrl, signal)
+	} finally {
+		release()
+	}
 }
 
 export const hasKey = (baseUrl: string) => {

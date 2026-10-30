@@ -19,7 +19,7 @@ if (action === 'store') records[profile] = fs.readFileSync(0, 'utf8').trim();
 else if (!records[profile]) process.exit(1);
 else if (action === 'clear') delete records[profile];
 else process.stdout.write(records[profile]);
-fs.writeFileSync(path, JSON.stringify(records));
+if (action === 'store' || action === 'clear') fs.writeFileSync(path, JSON.stringify(records));
 `
 // Stands in for the system browser: first knocks on the callback with a forged
 // state (which must be ignored), then visits the authorization URL and follows
@@ -36,12 +36,12 @@ fetch(forged)
 	.then((r) => r.text())
 	.then((t) => fs.writeFileSync(process.env.LU_TEST_PAGE, t));
 `
-function command(args, env) {
+function command(args, env, timeout = 20_000) {
 	return new Promise((resolve, reject) => {
 		const child = spawn(process.execPath, [cli, ...args], {
 			env,
 			stdio: ['ignore', 'pipe', 'pipe'],
-			timeout: 20_000,
+			timeout,
 		})
 		let stdout = '',
 			stderr = ''
@@ -76,6 +76,7 @@ function oauthServer(state) {
 				revocation_endpoint: `${origin}/oauth/revoke`,
 			})
 		if (url.pathname === '/oauth/register') {
+			if (state.registrationError) return json(503, { error: 'unavailable' })
 			state.registration = JSON.parse(body)
 			return json(201, { client_id: 'client-1', ...state.registration })
 		}
@@ -87,8 +88,11 @@ function oauthServer(state) {
 			res.writeHead(302, { Location: back.href })
 			return res.end()
 		}
-		if (url.pathname === '/oauth/token')
+		if (url.pathname === '/oauth/token') {
+			if (state.tokenDelay)
+				await new Promise((resolve) => setTimeout(resolve, state.tokenDelay))
 			return token(state, JSON.parse(body), json)
+		}
 		if (url.pathname === '/oauth/revoke') {
 			state.revoked.push(JSON.parse(body))
 			return json(200, {})
@@ -169,7 +173,7 @@ async function fixture(t) {
 		)
 	}
 	const read = (name) => readFileSync(env[name], 'utf8')
-	return { run, state, stored, setSession, read }
+	return { run, state, stored, setSession, read, env }
 }
 
 test('lu login registers the runtime loopback URL, proves PKCE and stores a session; refresh rotates; logout revokes', {
@@ -229,4 +233,84 @@ test('lu login registers the runtime loopback URL, proves PKCE and stores a sess
 		{ token: 'lur_1', token_type_hint: 'refresh_token', client_id: 'client-1' },
 	])
 	assert.deepEqual(stored(), [])
+})
+
+test('lu login exits promptly when client registration fails', async (t) => {
+	const { state, env } = await fixture(t)
+	state.registrationError = true
+	const result = await command(['login'], env, 2000)
+	assert.equal(result.code, 1, result.stderr)
+	assert.equal(JSON.parse(result.stderr).code, 'UNAVAILABLE')
+})
+
+test('concurrent CLI commands share one rotated session', {
+	skip: process.platform !== 'linux',
+}, async (t) => {
+	const { run, state, stored, setSession } = await fixture(t)
+	assert.equal((await run('login')).code, 0)
+	const session = JSON.parse(stored()[0])
+	setSession({ ...session, accessExpiresAt: new Date(0).toISOString() })
+	state.tokenDelay = 300
+	const results = await Promise.all([
+		run('identity'),
+		run('identity'),
+		run('identity'),
+	])
+	for (const result of results) assert.equal(result.code, 0, result.stderr)
+	assert.deepEqual(state.refreshes, ['lur_1'])
+	assert.equal(JSON.parse(stored()[0]).refreshToken, 'lur_2')
+	assert.deepEqual(state.bearers, Array(3).fill('Bearer lu_test_access2'))
+})
+
+test('concurrent MCP calls share one rotated session', {
+	skip: process.platform !== 'linux',
+}, async (t) => {
+	const { Client } = await import('@modelcontextprotocol/sdk/client/index.js')
+	const { StdioClientTransport } = await import(
+		'@modelcontextprotocol/sdk/client/stdio.js'
+	)
+	const { run, state, stored, setSession, env } = await fixture(t)
+	assert.equal((await run('login')).code, 0)
+	setSession({
+		...JSON.parse(stored()[0]),
+		accessExpiresAt: new Date(0).toISOString(),
+	})
+	state.tokenDelay = 300
+	const transport = new StdioClientTransport({
+		command: process.execPath,
+		args: [cli, 'mcp', '--tools', 'account'],
+		env,
+		stderr: 'pipe',
+	})
+	const client = new Client({ name: 'refresh-test', version: '0' })
+	t.after(() => client.close())
+	await client.connect(transport)
+	const results = await Promise.all(
+		Array.from({ length: 3 }, () =>
+			client.callTool({ name: 'get-identity', arguments: {} }),
+		),
+	)
+	for (const result of results)
+		assert.ok(!result.isError, JSON.stringify(result))
+	assert.deepEqual(state.refreshes, ['lur_1'])
+	assert.deepEqual(state.bearers, Array(3).fill('Bearer lu_test_access2'))
+})
+
+test('a failed refresh releases the lock for the next command', {
+	skip: process.platform !== 'linux',
+}, async (t) => {
+	const { run, state, stored, setSession } = await fixture(t)
+	assert.equal((await run('login')).code, 0)
+	const session = {
+		...JSON.parse(stored()[0]),
+		accessExpiresAt: new Date(0).toISOString(),
+	}
+	setSession({ ...session, refreshToken: 'invalid' })
+	const failed = await run('identity')
+	assert.equal(failed.code, 1)
+	assert.equal(JSON.parse(failed.stderr).code, 'INVALID_GRANT')
+	setSession(session)
+	const retry = await run('identity')
+	assert.equal(retry.code, 0, retry.stderr)
+	assert.deepEqual(state.refreshes, ['invalid', 'lur_1'])
 })
