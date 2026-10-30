@@ -1,10 +1,13 @@
 # Literary Universe CLI
 
 Command line tools for authors and local agents using [Literary Universe](https://literaryuniverse.com).
-Pull a story into local Tiptap JSON files, inspect changes offline, validate and
-push versioned drafts, create chapters, and publish or schedule an edition.
-Image preparation and authorized uploads are also supported. Broader blog editing
-and document imports remain to build.
+Sign in from the browser, pull a story into local Markdown and Tiptap JSON
+files, inspect changes offline, validate and push versioned drafts, create
+chapters, and publish or schedule an edition. `lu init` turns a story into a
+folder that Claude Code, Codex or T3 Code can open, with writing skills and an
+MCP server (`lu mcp`) for the same operations. Image preparation and authorized
+uploads are also supported. Broader blog editing and document imports remain to
+build.
 
 The CLI uses the [TypeScript SDK](https://github.com/LiteraryUniverse/sdk-typescript)
 and the same permissions as the web workshop. It targets Node 22 or later and Bun
@@ -42,7 +45,28 @@ installed `dist/main.js` directly with Node also works.
 
 ## Authentication and first pull
 
-Create a personal API key in your Literary Universe account. Reads need
+Sign in from the browser:
+
+```sh
+lu login
+lu identity
+```
+
+`lu login` opens Literary Universe in your browser and prints the URL in case
+the browser does not open. Allow the CLI there and it stores a session in the
+OS credential store for the selected deployment. The access token lasts
+a day and is refreshed on demand; the session itself lasts 90 days of use. The
+CLI appears under Settings → API keys as a connected app, where you can revoke
+it. `lu logout` revokes the session and removes it locally. Set `LU_BROWSER`
+(or `BROWSER`) to a command that should receive the URL instead of the system
+opener.
+
+Concurrent CLI commands and MCP calls share a deployment-specific refresh lock.
+The lock contains only the owner's process ID. If a process is force-killed
+while refreshing, later calls report `AUTH_BUSY` with the lock path. Check its
+`pid` file and remove the lock only after confirming that no LU process owns it.
+
+API keys still work and suit automation. Create a personal API key in your Literary Universe account. Reads need
 `story:read`; saving or creating chapters also needs `story:write`. Publication
 requires the separate `story:publish` scope. Scopes do not grant access beyond
 your current permissions or the key's selected resources.
@@ -82,6 +106,7 @@ lu stories
 lu pull STORY_ID --directory ./my-story
 lu status --directory ./my-story
 lu push --directory ./my-story
+lu refresh --directory ./my-story
 ```
 
 Run `lu` after installing the tarball, or substitute
@@ -89,9 +114,60 @@ Run `lu` after installing the tarball, or substitute
 JSON on stdout. Change summaries and errors use newline-delimited JSON on stderr;
 failed or partially successful commands exit with status 1.
 
+## Agent workspaces
+
+```sh
+lu init STORY_ID --directory ./my-story
+cd my-story
+claude        # or codex, or open the folder in T3 Code
+```
+
+`lu init` pulls the story and writes the files a writing agent needs:
+
+| File | Purpose |
+| --- | --- |
+| `chapters/001-title.LOCALE.md` | The chapter drafts, one per chapter and language. Edit these. |
+| `chapters/chapter-ID.LOCALE.json`, `.lu/` | Managed Tiptap JSON copies, manifest and pending writes. Never edit by hand. |
+| `AGENTS.md` | What the folder is, the refresh, edit, status, push loop, and the rule that the agent publishes nothing without the author's go-ahead. |
+| `CLAUDE.md` | `@AGENTS.md`, so Claude Code reads the same instructions. |
+| `.claude/skills/*/SKILL.md` | The `story-review`, `continuity-check` and `world-rules` writing skills. |
+| `.mcp.json` | Starts `lu mcp` for Claude Code and T3 Code. |
+| `.claude/settings.json` | Pre-approves the `literary-universe` MCP server for Claude Code (merged into an existing file). |
+| `.codex/config.toml` | The same MCP server for Codex in a trusted folder. |
+| `.gitignore` | Ignores `.lu/lock`. |
+
+The folder becomes a git repository with an initial commit when `git` is
+available and it is not already inside one. Running `lu init` again never
+overwrites an existing file; the report lists what was written. Both generated
+MCP configurations include the deployment selected by `--url` or `LU_BASE_URL`.
+For existing configurations, include `--url <deployment>` in the `lu mcp`
+arguments. Use that same option for CLI commands in the workspace.
+
+Agent setup:
+
+- Claude Code and T3 Code read `.mcp.json`. Claude Code asks once to trust the
+  folder; `.claude/settings.json` then enables the server without a prompt.
+- Codex reads `.codex/config.toml` once the folder is trusted. For an untrusted
+  folder, register the server globally: `codex mcp add literary-universe -- lu mcp`.
+- For any other MCP client, run `lu mcp` as a stdio server. `--tools` or
+  `LU_MCP_TOOLS` selects categories and tools, for example
+  `lu mcp --tools stories,stories-write,publish`; `publish` is opt-in. The server
+  logs to stderr only and answers tool calls with a sign-in hint until
+  `lu login` has run (or `LU_TOKEN` is set).
+
+The Markdown files are the server's own Markdown form of each draft. Pushing a
+changed `.md` sends Markdown and the server converts it with the editor's
+extensions; pushing a changed `.json` sends Tiptap JSON as before. A chapter
+whose `.md` and `.json` both changed is reported with `source: "both"` by
+`lu status` and refused by `lu push` as `AMBIGUOUS_CHANGE`; revert one file.
+`lu refresh` re-pulls every chapter into an existing project and reports
+added, updated and removed chapters; it refuses with `LOCAL_CHANGES` while
+anything is unpushed.
+
 ## Managed projects
 
-Chapters contain canonical Tiptap JSON in chapters/chapter-ID.LOCALE.json.
+Chapters contain canonical Tiptap JSON in chapters/chapter-ID.LOCALE.json and
+their Markdown mirror in chapters/SEQ-TITLE.LOCALE.md.
 The .lu directory holds the manifest, pulled snapshots and pending write intents.
 Chapter filenames must be distinct ignoring case. Pull and project validation
 reject collisions that would overwrite files on Windows or macOS.
@@ -204,7 +280,10 @@ bun test test
 ```
 
 The tests exercise CLI subprocesses, local files, lost replies, rejected/stale
-writes, deployment/path guards, and installation into a clean packed consumer.
+writes, deployment/path guards, browser sign-in against a fake OAuth server
+(`LU_BROWSER` points at a script that follows the authorization URL),
+`lu init` in a temporary folder, the `lu mcp` handshake over stdio, and
+installation into a clean packed consumer.
 Live LU checks run from the [monorepo](https://github.com/StorytellerCZ/Literary-Universe)
 with `node --experimental-strip-types app/scripts/testApiReadContract.mjs` and a
 separate local replica-set database ending in `_test`. Production draft writes require explicit

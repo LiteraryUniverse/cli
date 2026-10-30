@@ -12,6 +12,8 @@
   },
   "files": [
     "dist",
+    "templates",
+    "skills",
     "README.md",
     "LICENSE"
   ],
@@ -22,7 +24,8 @@
     "prepack": "npm run build"
   },
   "dependencies": {
-    "@literary-universe/sdk": "0.2.0",
+    "@literary-universe/sdk": "github:LiteraryUniverse/sdk-typescript#ed192f95b952869ccdebb2947387f9fe8fa2e804",
+    "@modelcontextprotocol/sdk": "1.32.2",
     "sharp": "0.35.5"
   },
   "devDependencies": {

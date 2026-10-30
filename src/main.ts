@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { readFileSync, statSync } from 'node:fs'
+import { readFile } from 'node:fs/promises'
 import { parseArgs } from 'node:util'
 import {
 	type JsonValue,
@@ -10,12 +11,25 @@ import {
 	localProjectStatus,
 	pullLocalProject,
 	pushLocalProject,
+	refreshLocalProject,
 } from '@literary-universe/sdk/project'
-import { loadKey, removeKey, storeKey } from './credentials.js'
+import { registerLiteraryUniverseTools } from '@literary-universe/sdk/mcp'
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+import {
+	hasKey,
+	loadKey,
+	loadSession,
+	removeKey,
+	storeKey,
+	storeSession,
+} from './credentials.js'
 import { curationCommand } from './curation.js'
 import { imageCommand } from './images.js'
+import { login, revokeSession } from './oauth.js'
+import { initWorkspace } from './workspace.js'
 
-const help = `Literary Universe CLI\n\nlu identity|profile|stories|universes\nlu story|universe|draft <id>\nlu chapters <story-id> [--language <locale>]\nlu pull <story-id> --directory <new-folder> [--language <locale>]\nlu status [--directory <folder>]\nlu push [--directory <folder>]\nlu save <chapter-id> --file <tiptap.json> --expected-version <version> --operation-id <id>\nlu recovery <chapter-id> --recovery-id <id>\nlu create <story-id> --operation-id <id> [--title <title>] [--file <tiptap.json>]\nlu publish <chapter-id> --expected-version <version> --operation-id <id> [--at <ISO-time>] [--audience readers|beta]\nlu image policy\nlu image prepare --file <source> --purpose <purpose> --output <new-file> [--crop x,y,w,h]\nlu image upload <target-id> --file <prepared> --purpose <purpose> --policy-version <version> --operation-id <id>\nlu image cover story|universe <id> --file <image>\nlu story update <story-id> [--title <t>] [--description <d>] [--genres <a,b>] [--tags <a,b>] [--rating <r>] [--license <l>] [--language <locale>] [--universe <id>|--standalone]\nlu story hide|show <story-id>\nlu chapter rename <chapter-id> --title <title> [--language <locale>]\nlu chapter remove <chapter-id>\nlu chapter reorder <story-id> --chapters <id,id,...>\nlu universe update <universe-id> [--title <t>] [--slug <s>] [--description <d>] [--genre <g>] [--rating <r>] [--license <l>] [--language <locale>]\nlu entries <universe-id> [--after <cursor>]\nlu entry <entry-id> [--language <locale>]\nlu entry create <universe-id> --file <entry.json>\nlu entry update <entry-id> --file <changes.json>\nlu entry translate <entry-id> --language <locale> --file <translation.json>\nlu entry publish|unpublish|delete <entry-id>\nlu series <universe-id>\nlu series save <universe-id> --title <t> --stories <id,id,...> --expected-version <n> [--series <id>]\nlu auth store|remove\n\nSet LU_TOKEN or provide a key through stdin to lu auth store. Keys are stored\nin the OS credential store for the selected deployment. Select it with --url\nor LU_BASE_URL. Output is JSON. Stripe settings are managed on the web.\n`
+const help = `Literary Universe CLI\n\nlu identity|profile|stories|universes\nlu story|universe|draft <id>\nlu chapters <story-id> [--language <locale>]\nlu pull <story-id> --directory <new-folder> [--language <locale>]\nlu init <story-id> --directory <new-folder> [--language <locale>]\nlu refresh [--directory <folder>]\nlu status [--directory <folder>]\nlu push [--directory <folder>]\nlu save <chapter-id> --file <tiptap.json> --expected-version <version> --operation-id <id>\nlu recovery <chapter-id> --recovery-id <id>\nlu create <story-id> --operation-id <id> [--title <title>] [--file <tiptap.json>]\nlu publish <chapter-id> --expected-version <version> --operation-id <id> [--at <ISO-time>] [--audience readers|beta]\nlu image policy\nlu image prepare --file <source> --purpose <purpose> --output <new-file> [--crop x,y,w,h]\nlu image upload <target-id> --file <prepared> --purpose <purpose> --policy-version <version> --operation-id <id>\nlu image cover story|universe <id> --file <image>\nlu story update <story-id> [--title <t>] [--description <d>] [--genres <a,b>] [--tags <a,b>] [--rating <r>] [--license <l>] [--language <locale>] [--universe <id>|--standalone]\nlu story hide|show <story-id>\nlu chapter rename <chapter-id> --title <title> [--language <locale>]\nlu chapter remove <chapter-id>\nlu chapter reorder <story-id> --chapters <id,id,...>\nlu universe update <universe-id> [--title <t>] [--slug <s>] [--description <d>] [--genre <g>] [--rating <r>] [--license <l>] [--language <locale>]\nlu entries <universe-id> [--after <cursor>]\nlu entry <entry-id> [--language <locale>]\nlu entry create <universe-id> --file <entry.json>\nlu entry update <entry-id> --file <changes.json>\nlu entry translate <entry-id> --language <locale> --file <translation.json>\nlu entry publish|unpublish|delete <entry-id>\nlu series <universe-id>\nlu series save <universe-id> --title <t> --stories <id,id,...> --expected-version <n> [--series <id>]\nlu auth store|remove\nlu login|logout [--url <deployment>]\nlu mcp [--tools <category,tool,...>] [--url <deployment>]\n\nlu login signs in through the browser and keeps a refreshable session in the\nOS credential store. Set LU_TOKEN or provide a key through stdin to lu auth store. Keys are stored\nin the OS credential store for the selected deployment. Select it with --url\nor LU_BASE_URL. Output is JSON. Stripe settings are managed on the web.\n`
 
 const options = {
 	url: { type: 'string' },
@@ -48,6 +62,7 @@ const options = {
 	stories: { type: 'string' },
 	series: { type: 'string' },
 	after: { type: 'string' },
+	tools: { type: 'string' },
 	help: { type: 'boolean', short: 'h' },
 } as const
 const parse = () => parseArgs({ allowPositionals: true, options })
@@ -68,6 +83,22 @@ async function inputKey() {
 		if (key.length > 512) invalid('API key input is too long')
 	}
 	return key.trim()
+}
+
+async function session(args: Args) {
+	if (args.positionals[0] === 'login') {
+		const stored = await login(args.baseUrl)
+		storeSession(args.baseUrl, stored)
+		return output({
+			status: 'logged-in',
+			deployment: args.baseUrl,
+			accessExpiresAt: stored.accessExpiresAt,
+		})
+	}
+	const current = loadSession(args.baseUrl)
+	if (current) await revokeSession(args.baseUrl, current)
+	removeKey(args.baseUrl)
+	output({ status: 'logged-out', deployment: args.baseUrl })
 }
 
 async function auth(args: Args) {
@@ -108,7 +139,31 @@ async function push(client: LiteraryUniverseClient, args: Args) {
 	)
 	const result = await pushLocalProject(client, args)
 	output(result)
+	for (const item of result)
+		if (item.code === 'AMBIGUOUS_CHANGE')
+			process.stderr.write(
+				`${JSON.stringify({ event: 'ambiguous-change', id: item.id, message: 'Both the Markdown and the JSON file changed; revert one and push again' })}\n`,
+			)
 	if (result.some((item) => item.status === 'failed')) process.exitCode = 1
+}
+
+/** A stdio MCP server for local agents; stdout carries the protocol, so nothing else prints there. */
+async function mcp(args: Args) {
+	const selection = (args.values.tools ?? process.env.LU_MCP_TOOLS)
+		?.split(',')
+		.map((item) => item.trim())
+		.filter(Boolean)
+	const server = new McpServer({ name: 'literary-universe', version })
+	const client = clientFor(args.baseUrl)
+	const { registered } = registerLiteraryUniverseTools(server, {
+		client: () => (hasKey(args.baseUrl) ? client : null),
+		tools: selection,
+		readLocalFile: (path) => readFile(path),
+	})
+	process.stderr.write(
+		`${JSON.stringify({ event: 'mcp', deployment: args.baseUrl, tools: registered })}\n`,
+	)
+	await server.connect(new StdioServerTransport())
 }
 
 function sourceDocument(file: string): JsonValue {
@@ -198,6 +253,17 @@ async function dispatch(client: LiteraryUniverseClient, args: Args) {
 				language: args.values.language,
 			}),
 		)
+	else if (command === 'init')
+		output(
+			await initWorkspace(client, {
+				...args,
+				directory: required(args.values.directory),
+				storyId: required(args.positionals[1]),
+				language: args.values.language,
+			}),
+		)
+	else if (command === 'refresh')
+		output(await refreshLocalProject(client, args))
 	else if (command === 'push') await push(client, args)
 	else if (command === 'save') await save(client, args)
 	else if (command === 'image') output(await imageCommand(client, args))
@@ -217,11 +283,15 @@ function argumentsFor(parsed: ReturnType<typeof parse>): Args {
 	}
 }
 
+const version = '0.2.0'
 const clientFor = (baseUrl: string) =>
 	new LiteraryUniverseClient({
 		baseUrl,
-		credentials: () => ({ kind: 'api-key', token: loadKey(baseUrl) }),
-		clientName: 'lu-cli/0.2.0',
+		credentials: async (signal) => ({
+			kind: 'api-key',
+			token: await loadKey(baseUrl, signal),
+		}),
+		clientName: `lu-cli/${version}`,
 	})
 
 async function main() {
@@ -234,6 +304,8 @@ async function main() {
 	if (args.positionals[0] === 'status')
 		return output(localProjectStatus(args.directory))
 	if (args.positionals[0] === 'auth') return auth(args)
+	if (['login', 'logout'].includes(args.positionals[0])) return session(args)
+	if (args.positionals[0] === 'mcp') return mcp(args)
 	await dispatch(clientFor(args.baseUrl), args)
 }
 
