@@ -36,6 +36,8 @@ test('CLI creates a draft from an untouched file and publishes its exact version
 	const server = createServer(async (req, res) => {
 		let body = ''
 		for await (const chunk of req) body += chunk
+		// Port scanners (an IDE probing new local ports) send no body; ignore them.
+		if (!body) return res.end()
 		const request = JSON.parse(body)
 		requests.push(request)
 		const result =

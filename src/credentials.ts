@@ -1,6 +1,11 @@
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { homedir, hostname } from 'node:os'
+import { join } from 'node:path'
+import { setTimeout as delay } from 'node:timers/promises'
 import { LiteraryUniverseApiError } from '@literary-universe/sdk'
+import { refreshSession, type Session } from './oauth.js'
 
 const service = 'LiteraryUniverse CLI'
 // Same canonical form as the SDK's endpoint, so every URL that reaches one
@@ -13,6 +18,22 @@ const profile = (baseUrl: string) => {
 }
 const validKey = (value: string) =>
 	/^lu_(live|dev|test)_[a-zA-Z0-9_-]+$/.test(value)
+const REFRESH_AHEAD_MS = 5 * 60_000
+
+function parseSession(value: string): Session | undefined {
+	try {
+		const session = JSON.parse(value) as Partial<Session>
+		if (
+			typeof session?.clientId === 'string' &&
+			typeof session.accessToken === 'string' &&
+			validKey(session.accessToken) &&
+			typeof session.accessExpiresAt === 'string' &&
+			typeof session.refreshToken === 'string'
+		)
+			return session as Session
+	} catch {}
+	return undefined
+}
 
 function run(command: string, args: string[], input?: string) {
 	try {
@@ -54,7 +75,7 @@ function macKeyring(action: KeyringAction, account: string, key?: string) {
 		return run(
 			'security',
 			['-i'],
-			`add-generic-password -U -a ${account} -s "${service}" -w ${key}\n`,
+			`add-generic-password -U -a ${account} -s "${service}" -w '${key}'\n`,
 		)
 	return run('security', [
 		action === 'read' ? 'find-generic-password' : 'delete-generic-password',
@@ -89,22 +110,107 @@ function keyring(action: KeyringAction, baseUrl: string, key?: string) {
 	return linuxKeyring(action, account, key)
 }
 
-export function loadKey(baseUrl: string) {
-	const key = process.env.LU_TOKEN ?? keyring('read', baseUrl)
-	if (!validKey(key))
+const invalidKey = () =>
+	new LiteraryUniverseApiError(
+		'INVALID_CONFIGURATION',
+		'A valid LU API key is required',
+	)
+
+async function refreshLock(baseUrl: string, signal?: AbortSignal) {
+	const parent = join(homedir(), '.literary-universe', 'auth-locks', hostname())
+	mkdirSync(parent, { recursive: true, mode: 0o700 })
+	const path = join(parent, profile(baseUrl))
+	const waiting = AbortSignal.any([
+		...(signal ? [signal] : []),
+		AbortSignal.timeout(30_000),
+	])
+	while (true) {
+		waiting.throwIfAborted()
+		try {
+			mkdirSync(path, { mode: 0o700 })
+			break
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error
+		}
+		try {
+			await delay(50, undefined, { signal: waiting })
+		} catch {
+			if (signal?.aborted) signal.throwIfAborted()
+			throw new LiteraryUniverseApiError(
+				'AUTH_BUSY',
+				`Another process is refreshing credentials. If no LU process is running, remove the stale lock at ${path}`,
+			)
+		}
+	}
+	const release = () => rmSync(path, { recursive: true, force: true })
+	try {
+		writeFileSync(join(path, 'pid'), String(process.pid), { mode: 0o600 })
+	} catch (error) {
+		release()
+		throw error
+	}
+	process.once('exit', release)
+	return () => {
+		process.removeListener('exit', release)
+		release()
+	}
+}
+
+const fresh = (session: Session) =>
+	Date.parse(session.accessExpiresAt) - Date.now() > REFRESH_AHEAD_MS
+
+async function refreshedKey(baseUrl: string, signal?: AbortSignal) {
+	const value = process.env.LU_TOKEN ?? keyring('read', baseUrl)
+	if (validKey(value)) return value
+	const session = parseSession(value)
+	if (!session) throw invalidKey()
+	if (fresh(session)) return session.accessToken
+	const refreshed = await refreshSession(baseUrl, session, signal)
+	if (!process.env.LU_TOKEN) storeSession(baseUrl, refreshed)
+	return refreshed.accessToken
+}
+
+/** A raw key or a login session, refreshed under a deployment-scoped process lock. */
+export async function loadKey(baseUrl: string, signal?: AbortSignal) {
+	const value = process.env.LU_TOKEN ?? keyring('read', baseUrl)
+	if (validKey(value)) return value
+	const session = parseSession(value)
+	if (!session) throw invalidKey()
+	if (fresh(session)) return session.accessToken
+	const release = await refreshLock(baseUrl, signal)
+	try {
+		// Re-read after acquiring the lock; another process may have rotated it.
+		return await refreshedKey(baseUrl, signal)
+	} finally {
+		release()
+	}
+}
+
+export const hasKey = (baseUrl: string) => {
+	try {
+		const value = process.env.LU_TOKEN ?? keyring('read', baseUrl)
+		return validKey(value) || Boolean(parseSession(value))
+	} catch {
+		return false
+	}
+}
+
+export function loadSession(baseUrl: string) {
+	return parseSession(keyring('read', baseUrl))
+}
+
+export function storeSession(baseUrl: string, session: Session) {
+	const value = JSON.stringify(session)
+	keyring('store', baseUrl, value)
+	if (keyring('read', baseUrl) !== value)
 		throw new LiteraryUniverseApiError(
-			'INVALID_CONFIGURATION',
-			'A valid LU API key is required',
+			'KEYSTORE_UNAVAILABLE',
+			'The OS credential store did not retain the session',
 		)
-	return key
 }
 
 export function storeKey(baseUrl: string, key: string) {
-	if (!validKey(key))
-		throw new LiteraryUniverseApiError(
-			'INVALID_CONFIGURATION',
-			'A valid LU API key is required',
-		)
+	if (!validKey(key)) throw invalidKey()
 	keyring('store', baseUrl, key)
 	if (keyring('read', baseUrl) !== key)
 		throw new LiteraryUniverseApiError(

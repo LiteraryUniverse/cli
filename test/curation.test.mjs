@@ -35,6 +35,8 @@ test('CLI curation commands send the named operation with only the given values'
 	const server = createServer(async (req, res) => {
 		let body = ''
 		for await (const chunk of req) body += chunk
+		// Port scanners (an IDE probing new local ports) send no body; ignore them.
+		if (!body) return res.end()
 		const request = JSON.parse(body)
 		requests.push(request)
 		res.setHeader('content-type', 'application/json')
