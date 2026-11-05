@@ -5,7 +5,7 @@
   "description": "Literary Universe command line tools for authors and local agents",
   "type": "module",
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   },
   "bin": {
     "lu": "dist/main.js"
