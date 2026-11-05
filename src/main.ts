@@ -7,13 +7,13 @@ import {
 	LiteraryUniverseApiError,
 	LiteraryUniverseClient,
 } from '@literary-universe/sdk'
+import { registerLiteraryUniverseTools } from '@literary-universe/sdk/mcp'
 import {
 	localProjectStatus,
 	pullLocalProject,
 	pushLocalProject,
 	refreshLocalProject,
 } from '@literary-universe/sdk/project'
-import { registerLiteraryUniverseTools } from '@literary-universe/sdk/mcp'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import {
@@ -96,9 +96,15 @@ async function session(args: Args) {
 		})
 	}
 	const current = loadSession(args.baseUrl)
-	if (current) await revokeSession(args.baseUrl, current)
+	// Signing out locally must not depend on reaching the deployment.
+	const revoked = current
+		? await revokeSession(args.baseUrl, current).then(
+				() => true,
+				() => false,
+			)
+		: undefined
 	removeKey(args.baseUrl)
-	output({ status: 'logged-out', deployment: args.baseUrl })
+	output({ status: 'logged-out', deployment: args.baseUrl, revoked })
 }
 
 async function auth(args: Args) {
@@ -283,7 +289,9 @@ function argumentsFor(parsed: ReturnType<typeof parse>): Args {
 	}
 }
 
-const version = '0.2.0'
+const { version } = JSON.parse(
+	readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
+) as { version: string }
 const clientFor = (baseUrl: string) =>
 	new LiteraryUniverseClient({
 		baseUrl,

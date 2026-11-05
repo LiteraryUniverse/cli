@@ -235,6 +235,7 @@ test('lu login registers the runtime loopback URL, proves PKCE and stores a sess
 	setSession(JSON.parse(stored()[0]))
 	const logout = await run('logout')
 	assert.equal(logout.code, 0, logout.stderr)
+	assert.equal(JSON.parse(logout.stdout).revoked, true)
 	assert.deepEqual(state.revoked, [
 		{ token: 'lur_1', token_type_hint: 'refresh_token', client_id: 'client-1' },
 	])

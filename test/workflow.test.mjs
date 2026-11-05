@@ -66,7 +66,10 @@ async function fixture(t, second = false, pull = true) {
 		const request = JSON.parse(body)
 		state.requests.push(request)
 		assert.equal(req.headers.authorization, 'Bearer lu_test_fixture')
-		assert.equal(req.headers['x-lu-client'], 'lu-cli/0.2.0')
+		assert.equal(
+			req.headers['x-lu-client'],
+			`lu-cli/${JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version}`,
+		)
 		let result
 		if (request.operationName === 'LuChapters')
 			result = {
