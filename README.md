@@ -19,22 +19,22 @@ Report CLI bugs in [this repository](https://github.com/LiteraryUniverse/cli/iss
 
 ## Install
 
-The source is MIT licensed. The package is still marked private and has not been
-released to npm. Build and install it from this repository:
+The CLI is published to npm as
+[`@literary-universe/cli`](https://www.npmjs.com/package/@literary-universe/cli)
+under the MIT license. Install it globally to get the `lu` command:
 
 ```sh
-git clone https://github.com/LiteraryUniverse/cli.git
-cd cli
-npm ci
-npm pack
-npm install --global ./literary-universe-cli-0.2.0.tgz
+npm install --global @literary-universe/cli
 lu --help
 ```
 
-Git must be available during `npm ci`. The CLI pins its SDK dependency to a
-commit in the SDK repository; npm builds it automatically. No sibling SDK clone
-or Meteor application is needed. The CLI tarball bundles that built SDK and can
-be installed in a separate project or globally.
+With Bun, use `bun add --global @literary-universe/cli`. To try it without
+installing, run `npx @literary-universe/cli --help`. The package brings the
+[SDK](https://www.npmjs.com/package/@literary-universe/sdk) and the image engine
+with it; no Literary Universe source checkout is needed.
+
+To build from source instead, clone this repository, run `npm ci && npm pack`,
+and install the resulting tarball with `npm install --global`.
 
 During development, run `npm run build`, then use `node dist/main.js` or
 `bun dist/main.js` in place of `lu`.
@@ -109,7 +109,7 @@ lu push --directory ./my-story
 lu refresh --directory ./my-story
 ```
 
-Run `lu` after installing the tarball, or substitute
+Run `lu` after installing the package, or substitute
 `node dist/main.js` or `bun dist/main.js` during development. Output is
 JSON on stdout. Change summaries and errors use newline-delimited JSON on stderr;
 failed or partially successful commands exit with status 1.
