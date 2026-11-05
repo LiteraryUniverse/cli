@@ -10,7 +10,7 @@ uploads are also supported. Broader blog editing and document imports remain to
 build.
 
 The CLI uses the [TypeScript SDK](https://github.com/LiteraryUniverse/sdk-typescript)
-and the same permissions as the web workshop. It targets Node 22 or later and Bun
+and the same permissions as the web workshop. It targets Node 24 or later and Bun
 on Linux, macOS and Windows.
 
 Read the [documentation in our feedback knowledge base](https://literaryuniverse.com/feedback/help)
