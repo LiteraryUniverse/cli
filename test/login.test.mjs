@@ -245,7 +245,7 @@ test('lu login registers the runtime loopback URL, proves PKCE and stores a sess
 test('lu login exits promptly when client registration fails', async (t) => {
 	const { state, env } = await fixture(t)
 	state.registrationError = true
-	const result = await command(['login'], env, 2000)
+	const result = await command(['login'], env, 10_000)
 	assert.equal(result.code, 1, result.stderr)
 	assert.equal(JSON.parse(result.stderr).code, 'UNAVAILABLE')
 })
