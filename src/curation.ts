@@ -20,6 +20,7 @@ type CurationArgs = {
 		chapters?: string
 		stories?: string
 		series?: string
+		first?: string
 		after?: string
 		file?: string
 		'expected-version'?: string
@@ -232,6 +233,42 @@ function seriesCommands(client: LiteraryUniverseClient, args: CurationArgs) {
 		planned(args, 'series-save', input)(() => client.saveSeries(input))
 }
 
+function blogCommands(client: LiteraryUniverseClient, args: CurationArgs) {
+	const [, verb, id] = args.positionals
+	const blogId = required(id)
+	if (verb === 'pages') {
+		const first =
+			args.values.first === undefined ? undefined : Number(args.values.first)
+		if (
+			first !== undefined &&
+			(!Number.isInteger(first) || first < 1 || first > 100)
+		)
+			invalid('--first must be a whole number between 1 and 100')
+		return () => client.blogPages({ blogId, first, after: args.values.after })
+	}
+	if (verb === 'menus') return () => client.blogMenus({ blogId })
+	if (verb !== 'mutate') invalid('Use lu blog pages, menus or mutate')
+	const data = jsonFile(required(args.values.file))
+	if (data.blogId !== undefined && data.blogId !== blogId)
+		invalid('The file blogId must match the command blog ID')
+	if (!Object.hasOwn(data, 'expectedVersion'))
+		invalid(
+			'Provide expectedVersion in the file; use null only for a new document',
+		)
+	const input = { ...data, blogId } as Parameters<
+		LiteraryUniverseClient['mutateBlog']
+	>[0]
+	return () =>
+		planned(args, 'blog-mutation', {
+			blogId,
+			action: input.action,
+			operationId: input.operationId,
+			expectedVersion: input.expectedVersion,
+			pageId: input.pageId,
+			location: input.location,
+		})(() => client.mutateBlog(input))
+}
+
 /**
  * Curation commands, or undefined when the arguments are another command.
  * `lu story <id>` and `lu universe <id>` stay reads.
@@ -241,6 +278,7 @@ export function curationCommand(
 	args: CurationArgs,
 ): Command | undefined {
 	const [noun, verb] = args.positionals
+	if (noun === 'blog') return blogCommands(client, args)
 	if (noun === 'story') return storyCommands(client, args)
 	if (noun === 'chapter') return chapterCommands(client, args)
 	if (noun === 'universe') return universeCommands(client, args)

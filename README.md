@@ -6,8 +6,8 @@ files, inspect changes offline, validate and push versioned drafts, create
 chapters, and publish or schedule an edition. `lu init` turns a story into a
 folder that Claude Code, Codex or T3 Code can open, with writing skills and an
 MCP server (`lu mcp`) for the same operations. Image preparation and authorized
-uploads are also supported. Broader blog editing and document imports remain to
-build.
+uploads are also supported. Blog pages and menus can be read and authored with JSON requests. Document
+imports remain to build.
 
 The CLI uses the [TypeScript SDK](https://github.com/LiteraryUniverse/sdk-typescript)
 and the same permissions as the web workshop. It targets Node 24 or later and Bun
@@ -313,3 +313,58 @@ Uploads create public assets; changing published content is a separate
 operation. `lu image cover story|universe` replaces a cover directly; the server
 crops it to the cover shape. Purpose/target mapping and finite quotas are documented in
 the [SDK image reference](https://github.com/LiteraryUniverse/sdk-typescript#images). Body/decode limits apply in addition to the HTTP request timeout.
+
+## Blog pages and menus
+
+Use `blog:read` to read private pages (including drafts and translations) and
+menus of blogs you manage. Writes need `blog:write` and the deployment's author
+API rollout. Organization keys are limited to their own enabled organization blog;
+story/universe-restricted keys cannot access blogs.
+
+```sh
+lu blog pages BLOG_ID --first 25
+lu blog pages BLOG_ID --first 25 --after LAST_PAGE_ID
+lu blog menus BLOG_ID
+lu blog mutate BLOG_ID --file mutation.json
+```
+
+Read commands return JSON documents with `id`, opaque `version` and stored `data`.
+Page listing sorts by ID; continue with the last ID until a short or empty batch.
+The mutation file holds the action and its inputs; `blogId` comes from the command.
+Create a page with this file:
+
+```json
+{
+  "action": "savePage",
+  "operationId": "author-page-1",
+  "expectedVersion": null,
+  "page": {"title": "Author", "slug": "author", "language": "en"}
+}
+```
+
+Supported actions are:
+
+| Action | Additional fields |
+| --- | --- |
+| `savePage` | `page: {title, slug, content?, language?}`; `pageId` for edits |
+| `translatePage` | `pageId`, `language`, `page: {title, slug, content?}` |
+| `publishPage` | `pageId`, `published: true` |
+| `saveMenu` | `location`, `items`, optional `settings` |
+| `translateMenu` | `location`, `language`, `entries` keyed by item/child IDs |
+
+Every write needs an `operationId` and an explicit `expectedVersion`. Use null
+only for a new page/menu. For edits, translations and publication, copy the latest
+returned version into the next request and use a new operation ID. Preserve the
+entire file unchanged for a lost-response retry. `VERSION_CONFLICT` means read
+again and review the changes before writing.
+
+Content uses the editor's Puck JSON format. Translation languages use content codes
+such as `cs`, not UI locales such as `cs-CZ`. Menus use `top`, `left` or `right`;
+retain readback item/child IDs to preserve their translations. Page and post
+links must target published content in the same blog. Empty `items` clears a menu.
+Use the existing `lu image policy`, `prepare` and `upload` commands for `blog-image`
+and `blog-logo` assets; use the returned file ID as the image handle.
+
+Menus and edits to published pages are live immediately. System pages, deletion,
+unpublishing and homepage changes remain web-editor actions. Mutation plans go to
+stderr and results go to stdout; the plan omits the file's page/menu content.
