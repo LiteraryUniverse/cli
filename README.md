@@ -218,7 +218,9 @@ with an explicit timezone. Chapter creation never publishes content.
 The first original chapter publishes/schedules its story. Publish the parent
 universe separately in LU; a story credential does not change universe visibility.
 Revisions, listing updates and durable notification jobs commit together.
-Production also requires authorApi.publicationEnabled on the server.
+Publication uses the key's scope and the author's current work permissions.
+Organization keys also require the organization's API feature and plan; no
+deployment settings or actor allowlist is required.
 
 ## Curation
 
