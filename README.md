@@ -218,7 +218,9 @@ with an explicit timezone. Chapter creation never publishes content.
 The first original chapter publishes/schedules its story. Publish the parent
 universe separately in LU; a story credential does not change universe visibility.
 Revisions, listing updates and durable notification jobs commit together.
-Production also requires authorApi.publicationEnabled on the server.
+Publication uses the key's scope and the author's current work permissions.
+Organization keys also require the organization's API feature and plan; no
+deployment settings or actor allowlist is required.
 
 ## Curation
 
@@ -286,8 +288,9 @@ writes, deployment/path guards, browser sign-in against a fake OAuth server
 installation into a clean packed consumer.
 Live LU checks run from the [monorepo](https://github.com/StorytellerCZ/Literary-Universe)
 with `node --experimental-strip-types app/scripts/testApiReadContract.mjs` and a
-separate local replica-set database ending in `_test`. Production draft writes require explicit
-server rollout configuration documented in the [SDK README](https://github.com/LiteraryUniverse/sdk-typescript#versioned-draft-writes).
+separate local replica-set database ending in `_test`. Draft writes use the
+[SDK permission checks](https://github.com/LiteraryUniverse/sdk-typescript#versioned-draft-writes)
+without deployment settings or an actor allowlist.
 
 ## Images
 
@@ -317,8 +320,8 @@ the [SDK image reference](https://github.com/LiteraryUniverse/sdk-typescript#ima
 ## Blog pages and menus
 
 Use `blog:read` to read private pages (including drafts and translations) and
-menus of blogs you manage. Writes need `blog:write` and the deployment's author
-API rollout. Organization keys are limited to their own enabled organization blog;
+menus of blogs you manage. Writes need `blog:write` and current blog-management
+permission. Organization keys are limited to their own enabled organization blog;
 story/universe-restricted keys cannot access blogs.
 
 ```sh
