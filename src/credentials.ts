@@ -26,7 +26,7 @@ function parseSession(value: string): Session | undefined {
 		if (
 			typeof session?.clientId === 'string' &&
 			typeof session.accessToken === 'string' &&
-			validKey(session.accessToken) &&
+			session.accessToken.length > 0 &&
 			typeof session.accessExpiresAt === 'string' &&
 			typeof session.refreshToken === 'string'
 		)
