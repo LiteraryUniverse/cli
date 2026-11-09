@@ -167,7 +167,7 @@ test('comic upload sends a folder of pages in name order, then appends them', as
 	])
 	assert.equal(requests.length, 3)
 	for (const { upload } of requests.slice(0, 2)) {
-		assert.equal(upload.purpose, 'comic-page')
+		assert.equal(upload.purpose, 'comic-page-art')
 		assert.equal(upload.targetId, 'chapter')
 	}
 	assert.equal(requests[2].operationName, 'LuAddComicPages')

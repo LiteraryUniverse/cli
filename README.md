@@ -340,7 +340,7 @@ right). `--license` is `lu-e`, `lu-ne` or a Creative Commons license such as
 `cc-by`. Pages of `lu-e`, `lu-ne`, paid and private comics are stored securely
 and served only to readers with access.
 
-`lu comic upload` fits each image to the comic-page limits (5 MB, at most 8192
+`lu comic upload` fits each image to the comic page limits (5 MB, at most 8192
 wide and 20000 tall), uploads it, and appends the pages in order. Listed files
 keep their order. A `--directory` uploads its PNG, JPEG and WebP files by name,
 with numbers in natural order, so `2.png` comes before `10.png`. Running it
