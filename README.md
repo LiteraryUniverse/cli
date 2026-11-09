@@ -155,6 +155,21 @@ Agent setup:
   logs to stderr only and answers tool calls with a sign-in hint until
   `lu login` has run (or `LU_TOKEN` is set).
 
+## Claude plugin
+
+This repository is also a Claude plugin. It doesn't need the CLI or a local
+folder. It connects Claude to the hosted MCP server at
+`https://literaryuniverse.com/mcp` and adds the three writing skills:
+
+```
+/plugin install literary-universe --marketplace LiteraryUniverse/cli
+```
+
+Run `/mcp` and choose `literary-universe` to sign in. Literary Universe opens
+in the browser and asks you to allow Claude. The connection then appears under
+Settings → API keys, where you can revoke it. Publishing tools are off on the
+hosted server.
+
 The Markdown files are the server's own Markdown form of each draft. Pushing a
 changed `.md` sends Markdown and the server converts it with the editor's
 extensions; pushing a changed `.json` sends Tiptap JSON as before. A chapter
