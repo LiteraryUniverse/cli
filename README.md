@@ -157,9 +157,20 @@ Agent setup:
 
 ## Claude plugin
 
-This repository is also a Claude plugin. It doesn't need the CLI or a local
-folder. It connects Claude to the hosted MCP server at
-`https://literaryuniverse.com/mcp` and adds the three writing skills:
+The `plugin/` folder is a Claude plugin that brings the Literary Universe AI
+Assistant into Claude. It doesn't need the CLI or a local folder. It connects
+Claude to the hosted MCP server at `https://literaryuniverse.com/mcp` and adds
+two skills:
+
+- `writing-feedback`: proofreading, tone, consistency, developmental,
+  dialogue and worldbuilding feedback on a story or chapter.
+- `encyclopedia-check`: an encyclopedia entry checked against your chapters
+  for discrepancies and gaps. It needs a plan that includes the universe
+  assistant.
+
+Both load the same instructions and context as the in-app assistant from the
+server (`load-writing-skill`, `load-universe-skill`), so they follow its
+changes without a plugin update. Install:
 
 ```
 /plugin install literary-universe --marketplace LiteraryUniverse/cli

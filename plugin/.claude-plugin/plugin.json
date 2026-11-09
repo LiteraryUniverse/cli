@@ -1,7 +1,7 @@
 {
   "name": "literary-universe",
-  "version": "0.1.0",
-  "description": "Work on your Literary Universe stories and universes from Claude: read and edit drafts, manage universes, and get developmental feedback, continuity checks and world-rule audits. Sign in with your Literary Universe account; publishing stays off.",
+  "version": "0.2.0",
+  "description": "Literary Universe's AI Assistant in Claude: proofreading, tone, consistency, developmental, dialogue and worldbuilding feedback on your stories, and encyclopedia checks against your chapters, with the same instructions and context the in-app assistant uses. Read and edit drafts and universes. Sign in with your Literary Universe account; publishing stays off.",
   "author": {
     "name": "Literary Universe",
     "url": "https://literaryuniverse.com"

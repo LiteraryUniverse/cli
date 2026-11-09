@@ -8,8 +8,8 @@
   "plugins": [
     {
       "name": "literary-universe",
-      "source": "./",
-      "description": "Literary Universe stories, universes and writing skills in Claude, signed in with OAuth."
+      "source": "./plugin",
+      "description": "Literary Universe's AI Assistant in Claude: writing feedback and encyclopedia checks on your own stories, signed in with OAuth."
     }
   ]
 }
