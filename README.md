@@ -10,7 +10,7 @@ uploads are also supported. Blog pages and menus can be read and authored with J
 imports remain to build.
 
 The CLI uses the [TypeScript SDK](https://github.com/LiteraryUniverse/sdk-typescript)
-and the same permissions as the web workshop. It targets Node 24 or later and Bun
+and the same permissions as the web workshop. It targets Node 26 or later and Bun
 on Linux, macOS and Windows.
 
 Read the [documentation in our feedback knowledge base](https://literaryuniverse.com/feedback/help)
@@ -32,6 +32,10 @@ With Bun, use `bun add --global @literary-universe/cli`. To try it without
 installing, run `npx @literary-universe/cli --help`. The package brings the
 [SDK](https://www.npmjs.com/package/@literary-universe/sdk) and the image engine
 with it; no Literary Universe source checkout is needed.
+
+Until the comic SDK release is published, this branch pins the merged SDK Git
+commit. Installing it requires Git and npm lifecycle scripts so npm can build
+the SDK.
 
 To build from source instead, clone this repository, run `npm ci && npm pack`,
 and install the resulting tarball with `npm install --global`.
@@ -344,7 +348,8 @@ and served only to readers with access.
 wide and 20000 tall), uploads it, and appends the pages in order. Listed files
 keep their order. A `--directory` uploads its PNG, JPEG and WebP files by name,
 with numbers in natural order, so `2.png` comes before `10.png`. Running it
-again appends the pages again.
+again appends the pages again. Upload at most 300 pages per command; each source
+image must be a regular file of at most 50 MB.
 
 A layer file holds `kind` (`text`, `sfx` or `encyclopedia`), `language` for
 text and sound effects, and `items` positioned in fractions of the page:

@@ -34,10 +34,10 @@ function installPackage(folder) {
 	installArchive(folder, archive)
 }
 function installArchive(folder, archive) {
+	// The pinned Git SDK dependency needs its prepare script to build dist.
 	const installed = runNpm(
 		[
 			'install',
-			'--ignore-scripts',
 			'--no-audit',
 			'--no-fund',
 			archive,

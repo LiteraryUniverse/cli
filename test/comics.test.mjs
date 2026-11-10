@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import {
+	mkdirSync,
+	mkdtempSync,
+	rmSync,
+	truncateSync,
+	writeFileSync,
+} from 'node:fs'
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -152,6 +158,7 @@ test('comic upload sends a folder of pages in name order, then appends them', as
 	})
 		.png()
 		.toBuffer()
+	mkdirSync(join(folder, 'nested.png'))
 	for (const name of ['p10.png', 'p2.png', 'notes.txt'])
 		writeFileSync(join(folder, name), name.endsWith('.png') ? png : 'x')
 	const run = await command(
@@ -188,4 +195,38 @@ test('comic upload refuses a folder without images', async (t) => {
 	assert.equal(run.code, 1)
 	assert.equal(JSON.parse(run.stderr).code, 'BAD_USER_INPUT')
 	assert.equal(requests.length, 0)
+})
+
+test('comic upload validates every input before uploading anything', async (t) => {
+	const { requests, env } = await deployment(t)
+	const folder = mkdtempSync(join(tmpdir(), 'lu-cli-invalid-pages-'))
+	t.after(() => rmSync(folder, { force: true, recursive: true }))
+	const page = join(folder, 'page.png')
+	await sharp({
+		create: { width: 10, height: 10, channels: 3, background: '#224' },
+	})
+		.png()
+		.toFile(page)
+	const oversized = join(folder, 'oversized.png')
+	writeFileSync(oversized, '')
+	truncateSync(oversized, 50 * 1024 * 1024 + 1)
+	const cases = [
+		[page, oversized],
+		[page, folder],
+		Array(301).fill(page),
+		[page, '--directory', folder],
+	]
+	for (const files of cases) {
+		const run = await command(['comic', 'upload', 'chapter', ...files], env)
+		assert.equal(run.code, 1, run.stderr)
+		assert.equal(
+			JSON.parse(run.stderr.trim().split('\n').at(-1)).code,
+			'BAD_USER_INPUT',
+		)
+		assert.equal(
+			requests.length,
+			0,
+			'invalid batches must not leave unattached uploads',
+		)
+	}
 })

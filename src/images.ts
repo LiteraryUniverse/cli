@@ -38,7 +38,7 @@ function purpose(value?: string): ImagePurpose {
 	return value as ImagePurpose
 }
 
-function readBounded(file: string, max: number) {
+export function readBounded(file: string, max: number) {
 	const fd = openSync(file, 'r')
 	try {
 		const stat = fstatSync(fd)

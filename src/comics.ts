@@ -1,7 +1,9 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { extname, join } from 'node:path'
 import type { LiteraryUniverseClient } from '@literary-universe/sdk'
-import { LiteraryUniverseApiError } from '@literary-universe/sdk'
+import { IMAGE_POLICY, LiteraryUniverseApiError } from '@literary-universe/sdk'
+
+import { readBounded } from './images.js'
 
 type ComicArgs = {
 	baseUrl: string
@@ -72,13 +74,26 @@ const byName = new Intl.Collator(undefined, { numeric: true }).compare
 
 /** Page files in reading order: the given files as listed, or a folder's images by name (2 before 10). */
 export function pageFiles(files: string[], directory?: string) {
-	if (files.length) return files
-	const folder = required(directory)
-	const found = readdirSync(folder)
-		.filter((name) => PAGE_TYPES.has(extname(name).toLowerCase()))
-		.sort(byName)
-		.map((name) => join(folder, name))
-	if (!found.length) invalid(`No PNG, JPEG or WebP images in ${folder}`)
+	if (files.length && directory)
+		invalid('Use either listed images or --directory')
+	const found = files.length
+		? files
+		: readdirSync(required(directory), { withFileTypes: true })
+				.filter(
+					(entry) =>
+						entry.isFile() && PAGE_TYPES.has(extname(entry.name).toLowerCase()),
+				)
+				.map((entry) => entry.name)
+				.sort(byName)
+				.map((name) => join(required(directory), name))
+	if (!found.length) invalid(`No PNG, JPEG or WebP images in ${directory}`)
+	if (found.length > 300) invalid('Upload at most 300 pages at once')
+	// Validate the whole batch before any uploads leave unattached assets.
+	for (const file of found) {
+		const stat = statSync(file)
+		if (!stat.isFile() || stat.size > IMAGE_POLICY.maxSourceBytes)
+			invalid('Image input must be a regular file within the byte limit')
+	}
 	return found
 }
 
@@ -117,12 +132,17 @@ async function upload(
 	files: string[],
 ) {
 	// sharp is loaded only when pages are uploaded.
-	const { uploadComicPages } = await import('@literary-universe/sdk/images')
-	return uploadComicPages(
-		client,
-		chapterId,
-		files.map((file) => ({ bytes: readFileSync(file) })),
-	)
+	const { uploadComicPageImage } = await import('@literary-universe/sdk/images')
+	const pages = []
+	for (const file of files)
+		pages.push({
+			fileId: await uploadComicPageImage(
+				client,
+				chapterId,
+				readBounded(file, IMAGE_POLICY.maxSourceBytes),
+			),
+		})
+	return client.addComicPages({ chapterId, pages })
 }
 
 function chapterCommands(client: LiteraryUniverseClient, args: ComicArgs) {
