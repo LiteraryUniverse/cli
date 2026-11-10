@@ -112,7 +112,8 @@ async function assertCommonJs(folder, bytes) {
 	assert.equal((await sharp(result.bytes).metadata()).hasAlpha, true)
 }
 test('packed CLI installs and runs without a sibling SDK or Meteor application', {
-	timeout: 60_000,
+	// A cold Git SDK install builds both module formats on slower CI runners.
+	timeout: 300_000,
 }, async () => {
 	const folder = mkdtempSync(join(tmpdir(), 'lu CLI Ω & packed-'))
 	try {
