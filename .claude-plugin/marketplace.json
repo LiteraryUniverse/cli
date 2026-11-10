@@ -1,0 +1,15 @@
+{
+  "name": "literary-universe",
+  "description": "The Literary Universe plugin for Claude.",
+  "owner": {
+    "name": "Literary Universe",
+    "url": "https://literaryuniverse.com"
+  },
+  "plugins": [
+    {
+      "name": "literary-universe",
+      "source": "./plugin",
+      "description": "Literary Universe's AI Assistant in Claude: writing feedback and encyclopedia checks on your own stories, signed in with OAuth."
+    }
+  ]
+}
