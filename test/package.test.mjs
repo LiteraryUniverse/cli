@@ -34,10 +34,10 @@ function installPackage(folder) {
 	installArchive(folder, archive)
 }
 function installArchive(folder, archive) {
+	// The pinned Git SDK dependency needs its prepare script to build dist.
 	const installed = runNpm(
 		[
 			'install',
-			'--ignore-scripts',
 			'--no-audit',
 			'--no-fund',
 			archive,
@@ -112,7 +112,8 @@ async function assertCommonJs(folder, bytes) {
 	assert.equal((await sharp(result.bytes).metadata()).hasAlpha, true)
 }
 test('packed CLI installs and runs without a sibling SDK or Meteor application', {
-	timeout: 60_000,
+	// A cold Git SDK install builds both module formats on slower CI runners.
+	timeout: 300_000,
 }, async () => {
 	const folder = mkdtempSync(join(tmpdir(), 'lu CLI Ω & packed-'))
 	try {

@@ -38,7 +38,7 @@ function purpose(value?: string): ImagePurpose {
 	return value as ImagePurpose
 }
 
-function readBounded(file: string, max: number) {
+export function readBounded(file: string, max: number) {
 	const fd = openSync(file, 'r')
 	try {
 		const stat = fstatSync(fd)
@@ -133,8 +133,8 @@ async function upload(client: LiteraryUniverseClient, args: ImageArgs) {
 
 async function cover(client: LiteraryUniverseClient, args: ImageArgs) {
 	const kind = args.positionals[2]
-	if (kind !== 'story' && kind !== 'universe')
-		invalid('Use lu image cover story|universe <id> --file <image>')
+	if (kind !== 'story' && kind !== 'universe' && kind !== 'comic')
+		invalid('Use lu image cover story|universe|comic <id> --file <image>')
 	const bytes = readBounded(required(args.values.file), 5 * 1024 * 1024)
 	const id = required(args.positionals[3])
 	process.stderr.write(

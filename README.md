@@ -10,7 +10,7 @@ uploads are also supported. Blog pages and menus can be read and authored with J
 imports remain to build.
 
 The CLI uses the [TypeScript SDK](https://github.com/LiteraryUniverse/sdk-typescript)
-and the same permissions as the web workshop. It targets Node 24 or later and Bun
+and the same permissions as the web workshop. It targets Node 26 or later and Bun
 on Linux, macOS and Windows.
 
 Read the [documentation in our feedback knowledge base](https://literaryuniverse.com/feedback/help)
@@ -32,6 +32,10 @@ With Bun, use `bun add --global @literary-universe/cli`. To try it without
 installing, run `npx @literary-universe/cli --help`. The package brings the
 [SDK](https://www.npmjs.com/package/@literary-universe/sdk) and the image engine
 with it; no Literary Universe source checkout is needed.
+
+Until the comic SDK release is published, this branch pins the merged SDK Git
+commit. Installing it requires Git and npm lifecycle scripts so npm can build
+the SDK.
 
 To build from source instead, clone this repository, run `npm ci && npm pack`,
 and install the resulting tarball with `npm install --global`.
@@ -339,9 +343,49 @@ Upload sends the exact prepared bytes. Keep that file, policy version, target an
 operation ID to resume an interrupted upload. LU checks the current policy and
 authorization; fetch a changed policy and prepare a new operation when required.
 Uploads create public assets; changing published content is a separate
-operation. `lu image cover story|universe` replaces a cover directly; the server
+operation. `lu image cover story|universe|comic` replaces a cover directly; the server
 crops it to the cover shape. Purpose/target mapping and finite quotas are documented in
 the [SDK image reference](https://github.com/LiteraryUniverse/sdk-typescript#images). Body/decode limits apply in addition to the HTTP request timeout.
+
+## Comics
+
+Comics, manga and webtoons need a key with `comic:read`, `comic:write` and,
+to publish, `comic:publish`. Sign in again with `lu login` if your session
+predates these permissions.
+
+```sh
+lu comic create --title "Skyward" --description "A girl climbs the tower." --format webtoon --license cc-by --genres fantasy
+lu comic chapter create COMIC_ID --title "Chapter 1"
+lu comic upload CHAPTER_ID --directory ./chapter-1
+lu comic upload CHAPTER_ID cover-page.png 01.png 02.png
+lu comic pages CHAPTER_ID
+lu comic page alt PAGE_ID --alt "A tower rising above the clouds"
+lu comic layer create PAGE_ID --file bubbles.json
+lu image cover comic COMIC_ID --file cover.png
+lu comic publish CHAPTER_ID --audience beta
+```
+
+`--format` is `manga` (right to left), `webtoon` (vertical) or `comic` (left to
+right). `--license` is `lu-e`, `lu-ne` or a Creative Commons license such as
+`cc-by`. Pages of `lu-e`, `lu-ne`, paid and private comics are stored securely
+and served only to readers with access.
+
+`lu comic upload` fits each image to the comic page limits (5 MB, at most 8192
+wide and 20000 tall), uploads it, and appends the pages in order. Listed files
+keep their order. A `--directory` uploads its PNG, JPEG and WebP files by name,
+with numbers in natural order, so `2.png` comes before `10.png`. Running it
+again appends the pages again. Upload at most 300 pages per command; each source
+image must be a regular file of at most 50 MB.
+
+A layer file holds `kind` (`text`, `sfx` or `encyclopedia`), `language` for
+text and sound effects, and `items` positioned in fractions of the page:
+
+```json
+{ "kind": "text", "language": "en", "items": [{ "x": 0.1, "y": 0.05, "w": 0.4, "h": 0.1, "text": "Up we go!" }] }
+```
+
+`lu mcp` offers the same through the `comics` and `comics-write` tools, and
+`publish-comic-chapter` with `--tools publish`.
 
 ## Blog pages and menus
 
