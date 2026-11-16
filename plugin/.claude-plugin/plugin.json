@@ -10,6 +10,7 @@
   "repository": "https://github.com/LiteraryUniverse/cli",
   "license": "MIT",
   "privacyPolicyUrl": "https://literaryuniverse.com/privacy",
+  "icon": "./.claude-plugin/icon.png",
   "keywords": [
     "writing",
     "fiction",
