@@ -9,7 +9,7 @@
     {
       "name": "literary-universe",
       "source": "./plugin",
-      "description": "Literary Universe's AI Assistant in Claude: writing feedback and encyclopedia checks on your own stories, signed in with OAuth."
+      "description": "Write on Literary Universe from Claude: project setup, stories, comics, chapter drafts, encyclopedia and the AI Assistant's feedback, signed in with OAuth."
     }
   ]
 }

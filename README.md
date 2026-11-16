@@ -161,29 +161,50 @@ Agent setup:
 
 ## Claude plugin
 
-The `plugin/` folder is a Claude plugin that brings the Literary Universe AI
-Assistant into Claude. It doesn't need the CLI or a local folder. It connects
-Claude to the hosted MCP server at `https://literaryuniverse.com/mcp` and adds
-two skills:
+The `plugin/` folder is a Claude plugin for writing on Literary Universe from
+Claude: on claude.ai, in the desktop app and in Claude Code. It needs neither
+the CLI nor a local folder. It connects Claude to the hosted MCP server at
+`https://literaryuniverse.com/mcp` and adds these skills:
 
-- `writing-feedback`: proofreading, tone, consistency, developmental,
-  dialogue and worldbuilding feedback on a story or chapter.
-- `encyclopedia-check`: an encyclopedia entry checked against your chapters
-  for discrepancies and gaps. It needs a plan that includes the universe
-  assistant.
+| Skill | Use |
+| --- | --- |
+| `setup-project` | Connect the account, choose or create the story, and in Claude Code make a local folder with `lu init`. |
+| `manuscript` | Create a story, bring text in as chapter drafts, save revisions, reorder chapters, publish. |
+| `encyclopedia-edit` | Add, change, translate and publish encyclopedia entries, universe translations and series. |
+| `comics` | Comics, manga and webtoons: chapters, page order, alt text, lettering. |
+| `writing-feedback` | Proofreading, tone, consistency, developmental, dialogue and worldbuilding feedback. |
+| `encyclopedia-check` | An entry checked against your chapters. Needs a plan that includes the universe assistant. |
 
-Both load the same instructions and context as the in-app assistant from the
-server (`load-writing-skill`, `load-universe-skill`), so they follow its
-changes without a plugin update. Install:
+The two feedback skills load the in-app assistant's instructions and context
+from the server (`load-writing-skill`, `load-universe-skill`), so they follow
+its changes without a plugin update. The others show you each change and wait
+for your approval before saving it.
+
+Install in Claude Code:
 
 ```
-/plugin install literary-universe --marketplace LiteraryUniverse/cli
+/plugin marketplace add LiteraryUniverse/cli
+/plugin install literary-universe@literary-universe
 ```
 
-Run `/mcp` and choose `literary-universe` to sign in. Literary Universe opens
-in the browser and asks you to allow Claude. The connection then appears under
-Settings → API keys, where you can revoke it. Publishing tools are off on the
-hosted server.
+On claude.ai or in the desktop app, open Customize → Plugins, add the
+marketplace `LiteraryUniverse/cli` and install Literary Universe.
+
+Then sign in: in Claude Code run `/mcp` and choose `literary-universe`;
+elsewhere connect the plugin's Literary Universe connector. Literary Universe
+opens in the browser and lists what Claude may do. The connection appears
+under Settings → Integrations → API & Service Keys, where you can revoke it.
+
+The plugin asks the server for every tool it has (`?tools=all,assistant`),
+including `publish-chapter` and `publish-comic-chapter`. Those do nothing
+without `confirm: true`, and the skills call them only on your go-ahead for
+that chapter. Story creation and comic tools appear once the hosted server
+runs an SDK release that has them.
+
+For a local project, ask Claude Code to set one up (the `setup-project` skill
+runs `lu login` and `lu init`). In that folder the plugin's hosted server and
+the folder's `lu mcp` server run side by side: the hosted one has the feedback
+skills, the local one reads files for covers and comic pages.
 
 The Markdown files are the server's own Markdown form of each draft. Pushing a
 changed `.md` sends Markdown and the server converts it with the editor's
