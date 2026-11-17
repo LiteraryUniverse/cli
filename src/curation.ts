@@ -23,6 +23,8 @@ type CurationArgs = {
 		first?: string
 		after?: string
 		file?: string
+		'ai-generated'?: boolean
+		'ai-model'?: string
 		'expected-version'?: string
 	}
 }
@@ -69,6 +71,29 @@ function planned(args: CurationArgs, event: string, plan: object) {
 function storyCommands(client: LiteraryUniverseClient, args: CurationArgs) {
 	const [, verb, id] = args.positionals
 	const v = args.values
+	if (verb === 'creation-options') return () => client.storyCreationOptions()
+	if (verb === 'create') {
+		const isAIGenerated = v['ai-generated'] ?? false
+		if (isAIGenerated && !v['ai-model']?.trim())
+			invalid('AI-generated stories require --ai-model')
+		const genres = list(required(v.genres)) ?? []
+		if (!genres.length) invalid('Provide at least one --genres value')
+		const input = {
+			title: required(v.title),
+			slug: required(v.slug),
+			description: required(v.description),
+			language: required(v.language),
+			genres,
+			rating: required(v.rating),
+			license: required(v.license),
+			isAIGenerated,
+			...given({ aiModel: v['ai-model'], universeId: v.universe }),
+		}
+		return () =>
+			planned(args, 'story-create', { title: input.title, slug: input.slug })(
+				() => client.createStory(input),
+			)
+	}
 	if (verb === 'update') {
 		if (v.universe && v.standalone)
 			invalid('Use either --universe or --standalone')

@@ -25,6 +25,8 @@ type ComicArgs = {
 		pages?: string
 		alt?: string
 		file?: string
+		chapter?: string
+		'ai-model'?: string
 		at?: string
 		audience?: string
 		after?: string
@@ -107,12 +109,14 @@ function comicDetails(v: ComicArgs['values']) {
 		genres: list(v.genres),
 		tags: list(v.tags),
 		isAIGenerated: v['ai-generated'],
+		aiModel: v['ai-model'],
 	})
 }
 
 function create(client: LiteraryUniverseClient, args: ComicArgs) {
 	const v = args.values
 	const input = {
+		...(v.file ? jsonFile(v.file) : {}),
 		...comicDetails(v),
 		title: required(v.title),
 		description: required(v.description),
@@ -157,6 +161,14 @@ function chapterCommands(client: LiteraryUniverseClient, args: ComicArgs) {
 				input,
 			)(() => client.createComicChapter(input as { comicId: string }))
 	}
+	if (verb === 'update') {
+		const input = jsonFile(required(args.values.file))
+		return () =>
+			planned(args, 'comic-chapter-update', {
+				id: target,
+				fields: Object.keys(input),
+			})(() => client.updateComicChapter({ id: target, input }))
+	}
 	if (verb === 'rename') {
 		const input = { title: required(args.values.title) }
 		return () =>
@@ -181,12 +193,30 @@ function chapterCommands(client: LiteraryUniverseClient, args: ComicArgs) {
 				input,
 			)(() => client.reorderComicChapters(input))
 	}
-	invalid('Use lu comic chapter create, rename, remove or reorder')
+	invalid('Use lu comic chapter create, update, rename, remove or reorder')
 }
 
 function pageCommands(client: LiteraryUniverseClient, args: ComicArgs) {
 	const [, , verb, id] = args.positionals
 	const target = required(id)
+	if (verb === 'replace') {
+		const chapterId = required(args.values.chapter)
+		const file = required(args.values.file)
+		return () =>
+			planned(args, 'comic-page-replace', { id: target, chapterId, file })(
+				async () => {
+					const { uploadComicPageImage } = await import(
+						'@literary-universe/sdk/images'
+					)
+					const fileId = await uploadComicPageImage(
+						client,
+						chapterId,
+						readBounded(file, IMAGE_POLICY.maxSourceBytes),
+					)
+					return client.replaceComicPageImage({ id: target, fileId })
+				},
+			)
+	}
 	if (verb === 'alt') {
 		const input = { id: target, altText: required(args.values.alt) }
 		return () =>
@@ -213,7 +243,7 @@ function pageCommands(client: LiteraryUniverseClient, args: ComicArgs) {
 				input,
 			)(() => client.reorderComicPages(input))
 	}
-	invalid('Use lu comic page alt, remove or reorder')
+	invalid('Use lu comic page replace, alt, remove or reorder')
 }
 
 function layerCommands(client: LiteraryUniverseClient, args: ComicArgs) {
@@ -278,7 +308,10 @@ export function comicCommand(
 			return create(client, args)
 		case 'update': {
 			const comicId = required(id)
-			const input = comicDetails(args.values)
+			const input = {
+				...(args.values.file ? jsonFile(args.values.file) : {}),
+				...comicDetails(args.values),
+			}
 			return () =>
 				planned(args, 'comic-update', { id: comicId, input })(() =>
 					client.updateComic({ id: comicId, input }),

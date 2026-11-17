@@ -63,3 +63,21 @@ test('lu mcp refuses an unknown tool selection before serving', async () => {
 	assert.equal(result.stdout, '')
 	assert.equal(JSON.parse(result.stderr).code, 'INVALID_CONFIGURATION')
 })
+
+test('lu mcp exposes SDK 0.4 creation and comic tools when selected', async (t) => {
+	const { client } = await connect(
+		t,
+		['--tools', 'creation,comics,comics-write'],
+		{ LU_TOKEN: 'lu_test_fixture' },
+	)
+	const { tools } = await client.listTools()
+	const names = tools.map((tool) => tool.name)
+	for (const name of [
+		'get-story-creation-options',
+		'create-story',
+		'list-comics',
+		'upload-comic-pages',
+		'replace-comic-page-image',
+	])
+		assert.ok(names.includes(name), name)
+})

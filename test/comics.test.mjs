@@ -82,7 +82,52 @@ test('comic commands send the named operation with only the given values', async
 			items: [{ x: 0.1, y: 0.1, w: 0.3, h: 0.1, text: 'Hello!' }],
 		}),
 	)
+	const metadata = join(folder, 'metadata.json')
+	writeFileSync(
+		metadata,
+		JSON.stringify({ isAIGenerated: true, aiModel: 'model' }),
+	)
 	const runs = [
+		[
+			[
+				'comic',
+				'create',
+				'--file',
+				metadata,
+				'--title',
+				'Skyward',
+				'--description',
+				'A climb.',
+				'--format',
+				'webtoon',
+				'--license',
+				'cc-by',
+			],
+			'LuCreateComic',
+			{
+				input: {
+					isAIGenerated: true,
+					aiModel: 'model',
+					title: 'Skyward',
+					description: 'A climb.',
+					format: 'webtoon',
+					license: 'cc-by',
+				},
+			},
+		],
+		[
+			['comic', 'update', 'comic', '--file', metadata, '--title', 'Updated'],
+			'LuUpdateComic',
+			{
+				id: 'comic',
+				input: { isAIGenerated: true, aiModel: 'model', title: 'Updated' },
+			},
+		],
+		[
+			['comic', 'chapter', 'update', 'chapter', '--file', metadata],
+			'LuUpdateComicChapter',
+			{ id: 'chapter', input: { isAIGenerated: true, aiModel: 'model' } },
+		],
 		[
 			[
 				'comic',
@@ -229,4 +274,46 @@ test('comic upload validates every input before uploading anything', async (t) =
 			'invalid batches must not leave unattached uploads',
 		)
 	}
+})
+
+test('comic page replacement uploads to its chapter then replaces the existing page', async (t) => {
+	const { requests, env } = await deployment(t)
+	const folder = mkdtempSync(join(tmpdir(), 'lu-cli-replace-'))
+	t.after(() => rmSync(folder, { force: true, recursive: true }))
+	const file = join(folder, 'page.png')
+	await sharp({
+		create: { width: 10, height: 20, channels: 3, background: '#224' },
+	})
+		.png()
+		.toFile(file)
+	const missing = await command(
+		['comic', 'page', 'replace', 'page', '--file', file],
+		env,
+	)
+	assert.equal(missing.code, 1)
+	assert.equal(JSON.parse(missing.stderr).code, 'BAD_USER_INPUT')
+	assert.equal(requests.length, 0)
+	const run = await command(
+		[
+			'comic',
+			'page',
+			'replace',
+			'page',
+			'--chapter',
+			'chapter',
+			'--file',
+			file,
+		],
+		env,
+	)
+	assert.equal(run.code, 0, run.stderr)
+	assert.equal(
+		JSON.parse(run.stderr.split('\n')[0]).event,
+		'comic-page-replace-plan',
+	)
+	assert.equal(requests.length, 2)
+	assert.equal(requests[0].upload.targetId, 'chapter')
+	assert.equal(requests[0].upload.purpose, 'comic-page-art')
+	assert.equal(requests[1].operationName, 'LuReplaceComicPageImage')
+	assert.deepEqual(requests[1].variables, { id: 'page', fileId: 'file-1' })
 })
