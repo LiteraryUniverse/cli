@@ -57,6 +57,80 @@ test('CLI curation commands send the named operation with only the given values'
 		LU_BASE_URL: `http://127.0.0.1:${server.address().port}`,
 	}
 	const runs = [
+		[['story', 'creation-options'], 'LuStoryCreationOptions', {}],
+		[
+			[
+				'story',
+				'create',
+				'--title',
+				'Voyages',
+				'--slug',
+				'voyages',
+				'--description',
+				'At sea.',
+				'--language',
+				'en',
+				'--genres',
+				'fantasy, adventure',
+				'--rating',
+				'universal',
+				'--license',
+				'cc-by',
+			],
+			'LuCreateStory',
+			{
+				input: {
+					title: 'Voyages',
+					slug: 'voyages',
+					description: 'At sea.',
+					language: 'en',
+					genres: ['fantasy', 'adventure'],
+					rating: 'universal',
+					license: 'cc-by',
+					isAIGenerated: false,
+				},
+			},
+		],
+		[
+			[
+				'story',
+				'create',
+				'--title',
+				'Voyages',
+				'--slug',
+				'voyages',
+				'--description',
+				'At sea.',
+				'--language',
+				'en',
+				'--genres',
+				'fantasy',
+				'--rating',
+				'universal',
+				'--license',
+				'cc-by',
+				'--ai-generated',
+				'--ai-model',
+				'model',
+				'--universe',
+				'universe',
+			],
+			'LuCreateStory',
+			{
+				input: {
+					title: 'Voyages',
+					slug: 'voyages',
+					description: 'At sea.',
+					language: 'en',
+					genres: ['fantasy'],
+					rating: 'universal',
+					license: 'cc-by',
+					isAIGenerated: true,
+					aiModel: 'model',
+					universeId: 'universe',
+				},
+			},
+		],
 		[
 			['story', 'update', 'story', '--license', 'cc-by-sa', '--tags', 'a, b'],
 			'LuUpdateStory',
@@ -152,4 +226,73 @@ test('CLI states each curation write before sending it and refuses contradicting
 	)
 	assert.equal(both.code, 1)
 	assert.equal(JSON.parse(both.stderr).code, 'BAD_USER_INPUT')
+})
+
+test('story creation refuses missing metadata and undisclosed AI models locally', async () => {
+	const env = {
+		...process.env,
+		LU_TOKEN: 'lu_test_fixture',
+		LU_BASE_URL: 'http://127.0.0.1:9',
+	}
+	for (const args of [
+		['story', 'create'],
+		['story', 'create', '--ai-generated'],
+		['story', 'create', '--ai-generated', '--ai-model', '  '],
+		['story', 'create', '--genres', ', '],
+	]) {
+		const run = await command(args, env)
+		assert.equal(run.code, 1)
+		assert.equal(JSON.parse(run.stderr).code, 'BAD_USER_INPUT')
+		assert.equal(run.stdout, '')
+	}
+})
+
+test('story creation does not retry an ambiguous server failure', async (t) => {
+	let requests = 0
+	const server = createServer(async (req, res) => {
+		let body = ''
+		for await (const chunk of req) body += chunk
+		if (!body) return res.end()
+		requests++
+		res.writeHead(503, { 'content-type': 'application/json' })
+		res.end(
+			JSON.stringify({
+				errors: [
+					{
+						message: 'Unavailable',
+						extensions: { code: 'SERVICE_UNAVAILABLE' },
+					},
+				],
+			}),
+		)
+	})
+	await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
+	t.after(() => new Promise((resolve) => server.close(resolve)))
+	const run = await command(
+		[
+			'story',
+			'create',
+			'--title',
+			'Voyages',
+			'--slug',
+			'voyages',
+			'--description',
+			'At sea.',
+			'--language',
+			'en',
+			'--genres',
+			'fantasy',
+			'--rating',
+			'universal',
+			'--license',
+			'cc-by',
+		],
+		{
+			...process.env,
+			LU_TOKEN: 'lu_test_fixture',
+			LU_BASE_URL: `http://127.0.0.1:${server.address().port}`,
+		},
+	)
+	assert.equal(run.code, 1)
+	assert.equal(requests, 1)
 })

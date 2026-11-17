@@ -33,9 +33,7 @@ installing, run `npx @literary-universe/cli --help`. The package brings the
 [SDK](https://www.npmjs.com/package/@literary-universe/sdk) and the image engine
 with it; no Literary Universe source checkout is needed.
 
-Until the comic SDK release is published, this branch pins the merged SDK Git
-commit. Installing it requires Git and npm lifecycle scripts so npm can build
-the SDK.
+The CLI uses the published `@literary-universe/sdk` 0.4.0 package.
 
 To build from source instead, clone this repository, run `npm ci && npm pack`,
 and install the resulting tarball with `npm install --global`.
@@ -368,6 +366,30 @@ operation. `lu image cover story|universe|comic` replaces a cover directly; the 
 crops it to the cover shape. Purpose/target mapping and finite quotas are documented in
 the [SDK image reference](https://github.com/LiteraryUniverse/sdk-typescript#images). Body/decode limits apply in addition to the HTTP request timeout.
 
+## Create a story
+
+Read the deployment's supported languages, genres, ratings and licenses before
+choosing metadata:
+
+```sh
+lu story creation-options
+lu story create --title "Voyages" --slug voyages --description "At sea." --language en --genres fantasy --rating universal --license cc-by
+```
+
+Creation needs unrestricted personal `story:write` access and a verified account.
+It creates an unpublished story and returns its ID and slug. Add `--universe ID`
+to place it in a universe you may write into. AI-generated text requires
+`--ai-generated --ai-model MODEL`; without `--ai-generated`, the story is recorded
+as human-written. The deployment validates the metadata and placement rules.
+
+Creation is never automatically retried. If the response is lost, find the chosen
+slug with `lu stories` or in the workshop before trying again. `lu create STORY_ID`
+still creates a chapter; use it with a stable operation ID to add manuscript text.
+Publishing remains a separate command.
+
+MCP clients can select `lu mcp --tools creation,stories,stories-write` for the
+`get-story-creation-options` and `create-story` tools alongside chapter authoring.
+
 ## Comics
 
 Comics, manga and webtoons need a key with `comic:read`, `comic:write` and,
@@ -380,6 +402,7 @@ lu comic chapter create COMIC_ID --title "Chapter 1"
 lu comic upload CHAPTER_ID --directory ./chapter-1
 lu comic upload CHAPTER_ID cover-page.png 01.png 02.png
 lu comic pages CHAPTER_ID
+lu comic page replace PAGE_ID --chapter CHAPTER_ID --file corrected-page.png
 lu comic page alt PAGE_ID --alt "A tower rising above the clouds"
 lu comic layer create PAGE_ID --file bubbles.json
 lu image cover comic COMIC_ID --file cover.png
@@ -397,6 +420,18 @@ keep their order. A `--directory` uploads its PNG, JPEG and WebP files by name,
 with numbers in natural order, so `2.png` comes before `10.png`. Running it
 again appends the pages again. Upload at most 300 pages per command; each source
 image must be a regular file of at most 50 MB.
+
+`lu comic page replace` uploads corrected art to the page's chapter and replaces
+its image, keeping its order, alt text and layers. Supply the chapter the page
+belongs to. After a lost response, inspect the page before retrying.
+
+For additional SDK metadata, `lu comic create --file metadata.json` accepts fields
+such as `contentWarnings`, `relatedStoryIds` and `aiModel` alongside the required
+creation flags. `lu comic update COMIC_ID --file changes.json` accepts the SDK's
+comic update fields; flags override file fields. Use
+`lu comic chapter update CHAPTER_ID --file changes.json` for chapter metadata,
+for example `{"isAIGenerated": true, "aiModel": "model-name"}`. JSON input must
+be an object no larger than 1 MiB. The deployment validates allowed fields.
 
 A layer file holds `kind` (`text`, `sfx` or `encyclopedia`), `language` for
 text and sound effects, and `items` positioned in fractions of the page:
