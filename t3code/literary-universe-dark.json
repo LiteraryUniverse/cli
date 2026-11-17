@@ -1,0 +1,32 @@
+{
+	"version": 1,
+	"name": "Literary Universe Dark",
+	"appearance": "dark",
+	"canvas": "#1B1A1A",
+	"accent": "#D4A843",
+	"colors": {
+		"chrome": "#1B1A1A",
+		"toolbar": "#1B1A1A",
+		"toolbarForeground": "#F0EDE8",
+		"toolbarBorder": "#7A7268",
+		"text": "#F0EDE8",
+		"border": "#7A7268",
+		"focus": "#D4A843",
+		"sidebar": "#141313",
+		"sidebarForeground": "#F0EDE8",
+		"sidebarBorder": "#7A7268",
+		"sidebarRowHover": "#212020",
+		"sidebarRowActive": "#372e1c",
+		"sidebarRowSelected": "#3A3530",
+		"error": "#e68887",
+		"warning": "#dec07d",
+		"codeBackground": "#141313",
+		"codeForeground": "#F0EDE8",
+		"terminalBackground": "#1B1A1A",
+		"terminalForeground": "#F0EDE8",
+		"terminalCursor": "#F0EDE8",
+		"terminalSelection": "#3A3530",
+		"terminalScrollbar": "#7A7268",
+		"terminalScrollbarHover": "#8C8478"
+	}
+}

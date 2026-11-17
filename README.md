@@ -157,6 +157,26 @@ Agent setup:
   logs to stderr only and answers tool calls with a sign-in hint until
   `lu login` has run (or `LU_TOKEN` is set).
 
+### T3 Code theme
+
+`t3code/` holds the Literary Universe palette for [T3 Code](https://t3.codes),
+one file for light mode (Manuscript) and one for dark (Codex). To use them, save
+both into `~/.t3/userdata/themes/` on the machine that runs T3 Code:
+
+```sh
+mkdir -p ~/.t3/userdata/themes && cd ~/.t3/userdata/themes
+curl -fsSLO https://raw.githubusercontent.com/LiteraryUniverse/cli/main/t3code/literary-universe-light.json
+curl -fsSLO https://raw.githubusercontent.com/LiteraryUniverse/cli/main/t3code/literary-universe-dark.json
+t3 theme set literary-universe-dark
+```
+
+Both then appear under **Settings → Appearance**, where each can be chosen for
+light or dark mode. The same files import through **Create theme** there. The
+themes apply to the web and desktop apps, not the phone app.
+
+On Omarchy none of this is needed: T3 Code follows the desktop theme, so the
+Literary Universe Omarchy themes already carry over.
+
 ## Claude plugin
 
 The `plugin/` folder is a Claude plugin for writing on Literary Universe from
