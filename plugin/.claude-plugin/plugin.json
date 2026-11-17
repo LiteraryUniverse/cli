@@ -1,7 +1,7 @@
 {
   "name": "literary-universe",
-  "version": "0.2.0",
-  "description": "Literary Universe's AI Assistant in Claude: proofreading, tone, consistency, developmental, dialogue and worldbuilding feedback on your stories, and encyclopedia checks against your chapters, with the same instructions and context the in-app assistant uses. Read and edit drafts and universes. Sign in with your Literary Universe account; publishing stays off.",
+  "version": "0.3.0",
+  "description": "Write on Literary Universe from Claude: set up a writing project, create stories and comics, save chapter drafts, keep your encyclopedia, and get the in-app AI Assistant's feedback. Sign in with your Literary Universe account; publishing waits for your go-ahead.",
   "author": {
     "name": "Literary Universe",
     "url": "https://literaryuniverse.com"
@@ -10,6 +10,7 @@
   "repository": "https://github.com/LiteraryUniverse/cli",
   "license": "MIT",
   "privacyPolicyUrl": "https://literaryuniverse.com/privacy",
+  "icon": "./.claude-plugin/icon.png",
   "keywords": [
     "writing",
     "fiction",
@@ -20,7 +21,7 @@
   "mcpServers": {
     "literary-universe": {
       "type": "http",
-      "url": "https://literaryuniverse.com/mcp"
+      "url": "https://literaryuniverse.com/mcp?tools=all,assistant"
     }
   }
 }
