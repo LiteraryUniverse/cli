@@ -1,7 +1,7 @@
 {
   "name": "literary-universe",
-  "version": "0.3.0",
-  "description": "Write on Literary Universe from Claude: set up a writing project, create stories and comics, save chapter drafts, keep your encyclopedia, and get the in-app AI Assistant's feedback. Sign in with your Literary Universe account; publishing waits for your go-ahead.",
+  "version": "0.4.0",
+  "description": "Write on Literary Universe from Claude: set up a writing project, create stories and comics, save chapter drafts, keep your encyclopedia and blog, and get the in-app AI Assistant's feedback. Sign in with your Literary Universe account; publishing waits for your go-ahead.",
   "author": {
     "name": "Literary Universe",
     "url": "https://literaryuniverse.com"
