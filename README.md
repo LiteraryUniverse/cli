@@ -170,6 +170,7 @@ the CLI nor a local folder. It connects Claude to the hosted MCP server at
 | `manuscript` | Create a story, bring text in as chapter drafts, save revisions, reorder chapters, publish. |
 | `encyclopedia-edit` | Add, change, translate and publish encyclopedia entries, universe translations and series. |
 | `comics` | Comics, manga and webtoons: chapters, page order, alt text, lettering. |
+| `blog` | Blog pages, menus, translations and page publication, through the `lu` CLI in Claude Code. |
 | `writing-feedback` | Proofreading, tone, consistency, developmental, dialogue and worldbuilding feedback. |
 | `encyclopedia-check` | An entry checked against your chapters. Needs a plan that includes the universe assistant. |
 
