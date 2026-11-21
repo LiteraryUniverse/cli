@@ -35,7 +35,7 @@ Read, show, write on approval of exactly that, read back.
 - **Translate:** `translate-blog-post` with the content code (such as `cs`). A
   new translation needs a title, and the text as Markdown unless the
   author wants an empty draft; it stays unpublished.
-  Changes to a published translation are live at once: say so first.
+  Changes to a live translation show at once: say so first.
 - **AI disclosure:** set `isAIGenerated` and `aiModel` only as the author says.
   When you wrote most of the text, ask before saving.
 
@@ -47,7 +47,7 @@ On VERSION_CONFLICT, read again, show what changed, and ask before writing.
 `confirm: true` and, as `expectedVersion`, the `version` of the post the author
 approved. On VERSION_CONFLICT, show the newer version and ask again. Call them only on the author's explicit go-ahead for that
 post and language in this conversation; without it they only echo the request.
-Publishing the original notifies the blog's followers; a translation does not. Report `live` from the result: a
+The first publication of the original sends notifications; a translation does not. Report `live` from the result: a
 scheduled post, or a translation of an unpublished original, is not visible
 yet. Fan-club tiers, podcasts, literary commentary and posts with blog widgets
 stay in the web editor.

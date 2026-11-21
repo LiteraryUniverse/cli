@@ -486,14 +486,15 @@ Every action needs `expectedVersion`: `null` for a new post, otherwise the
 `post` takes `title`, `slug` (lowercase letters, digits, `-` and `_`), `intro`, the body as either `markdown` or Tiptap JSON
 `content` (not both), `tags`, `language`, `coverFileId` (a `blog-image` upload for this blog; null
 removes it), `isAIGenerated` and `aiModel`. Omitted fields keep their value. A
-translation takes its language at the top level and shares the original cover,
-so its `post` leaves out `language` and `coverFileId`.
+translation takes its language at the top level and its cover cannot be set
+here, so its `post` leaves out `language` and `coverFileId`.
 A new post whose slug the blog already uses fails with `CONFLICT`, so
 retrying a create that already saved does not post twice. Fan-club tiers, podcasts and literary
 commentary stay in the web editor.
 
 `lu mcp` offers the same through the `blogs` and `blogs-write` tools, and
-`publish-blog-post` and `unpublish-blog-post` with `--tools publish`.
+`publish-blog-post` and `unpublish-blog-post` with `--tools publish`;
+`create-blog-post` takes the body as Markdown only.
 
 ## Blog pages and menus
 
