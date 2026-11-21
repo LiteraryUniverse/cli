@@ -272,6 +272,7 @@ function blogCommands(client: LiteraryUniverseClient, args: CurationArgs) {
 	if (verb === 'pages') return () => client.blogPages({ blogId, ...page })
 	if (verb === 'menus') return () => client.blogMenus({ blogId })
 	if (verb === 'posts') return () => client.blogPosts({ blogId, ...page })
+	// For `post`, the positional is the post ID.
 	if (verb === 'post') return () => client.blogPost({ id: blogId })
 	if (verb !== 'mutate' && verb !== 'mutate-post')
 		invalid('Use lu blog pages, menus, posts, post, mutate or mutate-post')

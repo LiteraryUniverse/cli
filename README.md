@@ -33,7 +33,7 @@ installing, run `npx @literary-universe/cli --help`. The package brings the
 [SDK](https://www.npmjs.com/package/@literary-universe/sdk) and the image engine
 with it; no Literary Universe source checkout is needed.
 
-The CLI uses the published `@literary-universe/sdk` 0.4.0 package.
+The CLI uses the published `@literary-universe/sdk` 0.5.0 package.
 
 To build from source instead, clone this repository, run `npm ci && npm pack`,
 and install the resulting tarball with `npm install --global`.
@@ -472,9 +472,12 @@ translations). Create a draft with:
 }
 ```
 
+Every action needs `expectedVersion`: `null` for a new post, otherwise the
+`version` from your latest read.
+
 | Action | Fields |
 | --- | --- |
-| `save` | `post`; `postId` and the latest `expectedVersion` for edits |
+| `save` | `post`; for edits, `postId` |
 | `translate` | `postId`, `language`, `post` (a new translation needs `title`) |
 | `publish` | `postId`, optional `publishAt` (ISO 8601), optional `language` for one translation |
 | `unpublish` | `postId`, optional `language` |
@@ -482,8 +485,8 @@ translations). Create a draft with:
 `post` takes `title`, `slug` (lowercase letters, digits, `-` and `_`), `intro`, the body as `markdown` or Tiptap JSON
 `content`, `tags`, `language`, `coverFileId` (a `blog-image` upload for this blog; null
 removes it), `isAIGenerated` and `aiModel`. Omitted fields keep their value.
-A new post whose slug the blog already uses fails with `CONFLICT`, so a
-retried create does not post twice. Fan-club tiers, podcasts and literary
+A new post whose slug the blog already uses fails with `CONFLICT`, so
+retrying a create that already saved does not post twice. Fan-club tiers, podcasts and literary
 commentary stay in the web editor.
 
 `lu mcp` offers the same through the `blogs` and `blogs-write` tools, and
