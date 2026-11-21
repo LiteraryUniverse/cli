@@ -480,7 +480,7 @@ translations). Create a draft with:
 | `unpublish` | `postId`, optional `language` |
 
 `post` takes `title`, `slug`, `intro`, the body as `markdown` or Tiptap JSON
-`content`, `tags`, `language`, `coverFileId` (a `blog-image` upload; null
+`content`, `tags`, `language`, `coverFileId` (a `blog-image` upload for this blog; null
 removes it), `isAIGenerated` and `aiModel`. Omitted fields keep their value.
 A new post whose slug the blog already uses fails with `CONFLICT`, so a
 retried create does not post twice. Fan-club tiers, podcasts and literary
