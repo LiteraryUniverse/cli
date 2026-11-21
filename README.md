@@ -449,7 +449,8 @@ text and sound effects, and `items` positioned in fractions of the page:
 `blog:read` lists the blogs you may post to or manage and reads their posts,
 drafts included; `blog:write` saves them as you, under the same rules as the web
 editor. That covers your own blog, organization blogs where you hold the blog
-post permission, and blogs delegated to you. Organization keys can read their
+post permission, and blogs delegated to you. Reading posts needs the same
+permission as writing them: blog management alone covers pages and menus. Organization keys can read their
 own organization blog's posts but not write them, since a post is signed by a
 person.
 
@@ -479,12 +480,14 @@ Every action needs `expectedVersion`: `null` for a new post, otherwise the
 | --- | --- |
 | `save` | `post`; for edits, `postId` |
 | `translate` | `postId`, `language`, `post` (a new translation needs `title`) |
-| `publish` | `postId`, optional `publishAt` (ISO 8601), optional `language` for one translation |
+| `publish` | `postId`, optional `publishAt` (ISO 8601 with a timezone, such as `2027-01-01T12:00:00Z`), optional `language` for one translation |
 | `unpublish` | `postId`, optional `language` |
 
-`post` takes `title`, `slug` (lowercase letters, digits, `-` and `_`), `intro`, the body as `markdown` or Tiptap JSON
-`content`, `tags`, `language`, `coverFileId` (a `blog-image` upload for this blog; null
-removes it), `isAIGenerated` and `aiModel`. Omitted fields keep their value.
+`post` takes `title`, `slug` (lowercase letters, digits, `-` and `_`), `intro`, the body as either `markdown` or Tiptap JSON
+`content` (not both), `tags`, `language`, `coverFileId` (a `blog-image` upload for this blog; null
+removes it), `isAIGenerated` and `aiModel`. Omitted fields keep their value. A
+translation takes its language at the top level and shares the original cover,
+so its `post` leaves out `language` and `coverFileId`.
 A new post whose slug the blog already uses fails with `CONFLICT`, so
 retrying a create that already saved does not post twice. Fan-club tiers, podcasts and literary
 commentary stay in the web editor.
