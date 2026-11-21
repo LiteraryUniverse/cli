@@ -171,7 +171,8 @@ function universeCommands(client: LiteraryUniverseClient, args: CurationArgs) {
 			rating: required(v.rating),
 			license: required(v.license),
 			language: required(v.language),
-			...given({ description: v.description, aiModel: v['ai-model'] }),
+			description: required(v.description),
+			...given({ aiModel: v['ai-model'] }),
 		}
 		// The SDK never retries creation: a repeat would make a second universe.
 		return () =>

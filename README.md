@@ -346,7 +346,7 @@ deployment settings or actor allowlist is required.
 ## Curation
 
 ```sh
-lu universe create --title "Deep Sea" --slug deep-sea --genre fantasy --rating teen --license cc-by --language en [--description "An ocean world."] [--ai-model MODEL]
+lu universe create --title "Deep Sea" --slug deep-sea --genre fantasy --rating teen --license cc-by --language en --description "An ocean world." [--ai-model MODEL]
 lu story update STORY_ID --license cc-by-sa --universe UNIVERSE_ID
 lu story update STORY_ID --title "Title" --genres fantasy,myth --standalone
 lu story hide STORY_ID
