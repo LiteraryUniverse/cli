@@ -139,3 +139,69 @@ test('CLI reads private blog documents and sends all five mutation actions witho
 	assert.equal(invalid.code, 1)
 	assert.equal(requests.length, count)
 })
+
+test('CLI lists blogs, reads posts and sends post mutations unchanged', async (t) => {
+	const folder = mkdtempSync(join(tmpdir(), 'lu-blog-posts-'))
+	const requests = []
+	const server = createServer(async (req, res) => {
+		let body = ''
+		for await (const chunk of req) body += chunk
+		if (!body) return res.end()
+		requests.push(JSON.parse(body))
+		res.setHeader('content-type', 'application/json')
+		res.end(
+			JSON.stringify({
+				data: { result: { id: 'post', version: 'new', data: {} } },
+			}),
+		)
+	})
+	await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
+	t.after(async () => {
+		await new Promise((resolve) => server.close(resolve))
+		rmSync(folder, { recursive: true, force: true })
+	})
+	const env = {
+		...process.env,
+		LU_TOKEN: 'lu_test_fixture',
+		LU_BASE_URL: `http://127.0.0.1:${server.address().port}`,
+	}
+	for (const [args, operationName, variables] of [
+		[['blogs'], 'LuBlogs', {}],
+		[
+			['blog', 'posts', 'blog', '--first', '5', '--after', 'last'],
+			'LuBlogPosts',
+			{ blogId: 'blog', first: 5, after: 'last' },
+		],
+		[['blog', 'post', 'post'], 'LuBlogPost', { id: 'post' }],
+	]) {
+		const result = await command(args, env)
+		assert.equal(result.code, 0, result.stderr)
+		assert.equal(requests.at(-1).operationName, operationName)
+		assert.deepEqual(requests.at(-1).variables, variables)
+	}
+	const file = join(folder, 'post.json')
+	const input = {
+		action: 'save',
+		expectedVersion: null,
+		post: { title: 'Launch', slug: 'launch', markdown: 'Hi' },
+	}
+	writeFileSync(file, JSON.stringify(input))
+	const result = await command(
+		['blog', 'mutate-post', 'blog', '--file', file],
+		env,
+	)
+	assert.equal(result.code, 0, result.stderr)
+	assert.equal(requests.at(-1).operationName, 'LuMutateBlogPost')
+	assert.deepEqual(requests.at(-1).variables, {
+		input: { ...input, blogId: 'blog' },
+	})
+	assert.equal(JSON.parse(result.stderr).event, 'blog-post-mutation-plan')
+	writeFileSync(file, JSON.stringify({ action: 'publish', postId: 'post' }))
+	const count = requests.length
+	const missing = await command(
+		['blog', 'mutate-post', 'blog', '--file', file],
+		env,
+	)
+	assert.equal(missing.code, 1)
+	assert.equal(requests.length, count)
+})
