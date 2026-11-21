@@ -487,7 +487,8 @@ Every action needs `expectedVersion`: `null` for a new post, otherwise the
 `content` (not both), `tags`, `language`, `coverFileId` (a `blog-image` upload for this blog; null
 removes it), `isAIGenerated` and `aiModel`. Omitted fields keep their value. A
 translation takes its language at the top level and its cover cannot be set
-here, so its `post` leaves out `language` and `coverFileId`.
+here, so its `post` leaves out `language` and `coverFileId`. Readers reach a
+translation at the original's slug with `?lang=<code>`.
 A new post whose slug the blog already uses fails with `CONFLICT`, so
 retrying a create that already saved does not post twice. Fan-club tiers, podcasts and literary
 commentary stay in the web editor.
