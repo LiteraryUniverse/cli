@@ -6,7 +6,7 @@ files, inspect changes offline, validate and push versioned drafts, create
 chapters, and publish or schedule an edition. `lu init` turns a story into a
 folder that Claude Code, Codex or T3 Code can open, with writing skills and an
 MCP server (`lu mcp`) for the same operations. Image preparation and authorized
-uploads are also supported. Blog pages and menus can be read and authored with JSON requests. Document
+uploads are also supported. Blog posts, pages and menus can be read and authored with JSON requests. Document
 imports remain to build.
 
 The CLI uses the [TypeScript SDK](https://github.com/LiteraryUniverse/sdk-typescript)
@@ -170,7 +170,7 @@ the CLI nor a local folder. It connects Claude to the hosted MCP server at
 | `manuscript` | Create a story, bring text in as chapter drafts, save revisions, reorder chapters, publish. |
 | `encyclopedia-edit` | Add, change, translate and publish encyclopedia entries, universe translations and series. |
 | `comics` | Comics, manga and webtoons: chapters, page order, alt text, lettering. |
-| `blog` | Blog pages, menus, translations and page publication, through the `lu` CLI in Claude Code. |
+| `blog` | Blog posts on personal and organization blogs: write, translate, publish. Pages and menus through the `lu` CLI in Claude Code. |
 | `writing-feedback` | Proofreading, tone, consistency, developmental, dialogue and worldbuilding feedback. |
 | `encyclopedia-check` | An entry checked against your chapters. Needs a plan that includes the universe assistant. |
 
@@ -443,6 +443,51 @@ text and sound effects, and `items` positioned in fractions of the page:
 
 `lu mcp` offers the same through the `comics` and `comics-write` tools, and
 `publish-comic-chapter` with `--tools publish`.
+
+## Blog posts
+
+`blog:read` lists the blogs you may post to or manage and reads their posts,
+drafts included; `blog:write` saves them as you, under the same rules as the web
+editor. That covers your own blog, organization blogs where you hold the blog
+post permission, and blogs delegated to you. Organization keys can read their
+own organization blog's posts but not write them, since a post is signed by a
+person.
+
+```sh
+lu blogs
+lu blog posts BLOG_ID --first 25 [--after LAST_POST_ID]
+lu blog post POST_ID
+lu blog mutate-post BLOG_ID --file post.json
+```
+
+Each post comes back with `id`, an opaque `version` and `data`, where title,
+intro and tags are plain text and `markdown` holds the body (`i18n.<code>` for
+translations). Create a draft with:
+
+```json
+{
+  "action": "save",
+  "expectedVersion": null,
+  "post": {"title": "Launch day", "slug": "launch-day", "markdown": "We are **live**."}
+}
+```
+
+| Action | Fields |
+| --- | --- |
+| `save` | `post`; `postId` and the latest `expectedVersion` for edits |
+| `translate` | `postId`, `language`, `post` (a new translation needs `title`) |
+| `publish` | `postId`, optional `publishAt` (ISO 8601), optional `language` for one translation |
+| `unpublish` | `postId`, optional `language` |
+
+`post` takes `title`, `slug`, `intro`, the body as `markdown` or Tiptap JSON
+`content`, `tags`, `language`, `coverFileId` (a `blog-image` upload; null
+removes it), `isAIGenerated` and `aiModel`. Omitted fields keep their value.
+A new post whose slug the blog already uses fails with `CONFLICT`, so a
+retried create does not post twice. Fan-club tiers, podcasts and literary
+commentary stay in the web editor.
+
+`lu mcp` offers the same through the `blogs` and `blogs-write` tools, and
+`publish-blog-post` and `unpublish-blog-post` with `--tools publish`.
 
 ## Blog pages and menus
 

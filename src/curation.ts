@@ -258,21 +258,23 @@ function seriesCommands(client: LiteraryUniverseClient, args: CurationArgs) {
 		planned(args, 'series-save', input)(() => client.saveSeries(input))
 }
 
+function pageSize(value?: string) {
+	const first = value === undefined ? undefined : Number(value)
+	if (first !== undefined && (!Number.isInteger(first) || first < 1 || first > 100))
+		invalid('--first must be a whole number between 1 and 100')
+	return first
+}
+
 function blogCommands(client: LiteraryUniverseClient, args: CurationArgs) {
 	const [, verb, id] = args.positionals
 	const blogId = required(id)
-	if (verb === 'pages') {
-		const first =
-			args.values.first === undefined ? undefined : Number(args.values.first)
-		if (
-			first !== undefined &&
-			(!Number.isInteger(first) || first < 1 || first > 100)
-		)
-			invalid('--first must be a whole number between 1 and 100')
-		return () => client.blogPages({ blogId, first, after: args.values.after })
-	}
+	const page = { first: pageSize(args.values.first), after: args.values.after }
+	if (verb === 'pages') return () => client.blogPages({ blogId, ...page })
 	if (verb === 'menus') return () => client.blogMenus({ blogId })
-	if (verb !== 'mutate') invalid('Use lu blog pages, menus or mutate')
+	if (verb === 'posts') return () => client.blogPosts({ blogId, ...page })
+	if (verb === 'post') return () => client.blogPost({ id: blogId })
+	if (verb !== 'mutate' && verb !== 'mutate-post')
+		invalid('Use lu blog pages, menus, posts, post, mutate or mutate-post')
 	const data = jsonFile(required(args.values.file))
 	if (data.blogId !== undefined && data.blogId !== blogId)
 		invalid('The file blogId must match the command blog ID')
@@ -280,6 +282,20 @@ function blogCommands(client: LiteraryUniverseClient, args: CurationArgs) {
 		invalid(
 			'Provide expectedVersion in the file; use null only for a new document',
 		)
+	if (verb === 'mutate-post') {
+		const input = { ...data, blogId } as Parameters<
+			LiteraryUniverseClient['mutateBlogPost']
+		>[0]
+		return () =>
+			planned(args, 'blog-post-mutation', {
+				blogId,
+				action: input.action,
+				postId: input.postId,
+				language: input.language,
+				expectedVersion: input.expectedVersion,
+				publishAt: input.publishAt,
+			})(() => client.mutateBlogPost(input))
+	}
 	const input = { ...data, blogId } as Parameters<
 		LiteraryUniverseClient['mutateBlog']
 	>[0]
@@ -303,6 +319,7 @@ export function curationCommand(
 	args: CurationArgs,
 ): Command | undefined {
 	const [noun, verb] = args.positionals
+	if (noun === 'blogs') return () => client.blogs()
 	if (noun === 'blog') return blogCommands(client, args)
 	if (noun === 'story') return storyCommands(client, args)
 	if (noun === 'chapter') return chapterCommands(client, args)
