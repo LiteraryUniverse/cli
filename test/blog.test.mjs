@@ -27,7 +27,10 @@ function command(args, env) {
 	})
 }
 
-test('CLI reads private blog documents and sends all five mutation actions without changing concurrency input', async (t) => {
+// Many CLI subprocesses: slower than Bun's 5 s default on the macOS Intel runner.
+test('CLI reads private blog documents and sends all five mutation actions without changing concurrency input', {
+	timeout: 30_000,
+}, async (t) => {
 	const folder = mkdtempSync(join(tmpdir(), 'lu-blog-'))
 	const requests = []
 	const server = createServer(async (req, res) => {
