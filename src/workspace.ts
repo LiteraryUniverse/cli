@@ -259,6 +259,9 @@ export async function initWorkspace(
 	const title = work?.title ?? input.id
 	const root = input.directory
 	mkdirSync(root, { recursive: true })
+	// An existing folder (an Obsidian vault, say) holds the author's own files,
+	// and .obsidian/ can hold plugin keys: no repository is made and committed there.
+	const empty = readdirSync(root).length === 0
 	const files = folderFiles(root)
 	const { config, legacy } = await bind(files, input)
 	const sync = await syncVault({
@@ -302,7 +305,7 @@ export async function initWorkspace(
 		title,
 		sync,
 		written,
-		git: initGit(root),
+		git: empty ? initGit(root) : 'skipped',
 	}
 }
 

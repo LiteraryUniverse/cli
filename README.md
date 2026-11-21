@@ -193,8 +193,10 @@ contacting the server.
 | `.codex/config.toml` | The same MCP server for Codex in a trusted folder. |
 | `.gitignore` | Ignores `.lu/lock`. |
 
-The folder becomes a git repository with an initial commit when `git` is
-available and it is not already inside one. Both generated MCP configurations
+A new, empty folder becomes a git repository with an initial commit when
+`git` is available and it is not already inside one. An existing folder, such
+as an Obsidian vault, is left without one: its `.obsidian/` settings can hold
+plugin keys. Both generated MCP configurations
 include the deployment selected by `--url` or `LU_BASE_URL`. `lu sync` refuses
 a folder set up for another deployment, so use that same option for CLI
 commands in the folder. For existing configurations, include

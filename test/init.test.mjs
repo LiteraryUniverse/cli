@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { execFileSync, spawn } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import {
 	existsSync,
 	mkdirSync,
@@ -237,7 +237,9 @@ test('lu init story syncs into an existing folder and writes the agent workspace
 	const report = JSON.parse(first.stdout)
 	assert.equal(report.kind, 'story')
 	assert.equal(report.title, 'The Long Night')
-	assert.equal(report.git, 'initialized')
+	// The folder held the author's files (and .obsidian/): no repository is made.
+	assert.equal(report.git, 'skipped')
+	assert.ok(!existsSync(join(folder, '.git')))
 	assert.deepEqual(report.sync.created.sort(), [
 		'01 First Light.md',
 		'Story.md',
@@ -289,11 +291,6 @@ test('lu init story syncs into an existing folder and writes the agent workspace
 		read('.claude/skills/story-review/SKILL.md'),
 		/^---\nname: story-review\n/,
 	)
-	const log = execFileSync('git', ['log', '--oneline'], {
-		cwd: folder,
-		encoding: 'utf8',
-	})
-	assert.match(log, /Initial import from Literary Universe/)
 
 	writeFileSync(join(folder, 'AGENTS.md'), 'Mine.\n')
 	const again = await run(['init', 'story', 'story', '--directory', folder])
