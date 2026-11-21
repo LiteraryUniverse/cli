@@ -27,7 +27,8 @@ function command(args, env) {
 	})
 }
 
-test('CLI curation commands send the named operation with only the given values', async (t) => {
+/** A server answering each operation with its name, and the input files. */
+async function curationServer(t) {
 	const folder = mkdtempSync(join(tmpdir(), 'lu-cli-curation-')),
 		requests = []
 	const changes = join(folder, 'changes.json')
@@ -60,7 +61,25 @@ test('CLI curation commands send the named operation with only the given values'
 		LU_TOKEN: 'lu_test_fixture',
 		LU_BASE_URL: `http://127.0.0.1:${server.address().port}`,
 	}
-	const runs = [
+	return { env, requests, changes, translation, doc }
+}
+
+async function expectOperations({ env, requests }, runs) {
+	for (const [args, operationName, variables] of runs) {
+		requests.length = 0
+		const run = await command(args, env)
+		assert.equal(run.code, 0, run.stderr)
+		assert.equal(requests.length, 1)
+		assert.equal(requests[0].operationName, operationName)
+		assert.deepEqual(requests[0].variables, variables)
+		assert.equal(JSON.parse(run.stdout).operation, operationName)
+	}
+}
+
+test('CLI curation commands send the named operation with only the given values', async (t) => {
+	const server = await curationServer(t)
+	const { changes } = server
+	await expectOperations(server, [
 		[['story', 'creation-options'], 'LuStoryCreationOptions', {}],
 		[
 			[
@@ -170,6 +189,38 @@ test('CLI curation commands send the named operation with only the given values'
 			'LuUpdateEncyclopediaEntry',
 			{ id: 'entry', changes: { summary: 'A captain.', tags: ['sea'] } },
 		],
+		[
+			[
+				'series',
+				'save',
+				'universe',
+				'--title',
+				'Voyages',
+				'--stories',
+				's1,s2',
+				'--expected-version',
+				'0',
+			],
+			'LuSaveSeries',
+			{
+				input: {
+					universeId: 'universe',
+					expectedVersion: 0,
+					title: 'Voyages',
+					storyIds: ['s1', 's2'],
+				},
+			},
+		],
+		[['series', 'universe'], 'LuSeries', { universeId: 'universe' }],
+		[['story', 'story'], 'LuStory', { id: 'story' }],
+	])
+})
+
+// A test of its own: Bun stops a test after five seconds.
+test('CLI sends AI disclosure, expected versions, universe creation and entry releases', async (t) => {
+	const server = await curationServer(t)
+	const { changes, translation, doc } = server
+	await expectOperations(server, [
 		[
 			[
 				'entry',
@@ -359,40 +410,7 @@ test('CLI curation commands send the named operation with only the given values'
 				},
 			},
 		],
-		[
-			[
-				'series',
-				'save',
-				'universe',
-				'--title',
-				'Voyages',
-				'--stories',
-				's1,s2',
-				'--expected-version',
-				'0',
-			],
-			'LuSaveSeries',
-			{
-				input: {
-					universeId: 'universe',
-					expectedVersion: 0,
-					title: 'Voyages',
-					storyIds: ['s1', 's2'],
-				},
-			},
-		],
-		[['series', 'universe'], 'LuSeries', { universeId: 'universe' }],
-		[['story', 'story'], 'LuStory', { id: 'story' }],
-	]
-	for (const [args, operationName, variables] of runs) {
-		requests.length = 0
-		const run = await command(args, env)
-		assert.equal(run.code, 0, run.stderr)
-		assert.equal(requests.length, 1)
-		assert.equal(requests[0].operationName, operationName)
-		assert.deepEqual(requests[0].variables, variables)
-		assert.equal(JSON.parse(run.stdout).operation, operationName)
-	}
+	])
 })
 
 test('CLI states each curation write before sending it and refuses contradicting options', async () => {

@@ -222,7 +222,9 @@ async function fixture(t) {
 	}
 }
 
-test('lu init story syncs into an existing folder and writes the agent workspace once', async (t) => {
+test('lu init story syncs into an existing folder and writes the agent workspace once', {
+	timeout: 30_000,
+}, async (t) => {
 	const { folder, read, write, run, baseUrl } = await fixture(t)
 	write(
 		'.claude/settings.json',
@@ -337,7 +339,9 @@ test('lu init needs the kind without a terminal and never contacts the server fo
 	}
 })
 
-test('lu init universe lays out the universe, and lu status and lu sync push edits and new notes', async (t) => {
+test('lu init universe lays out the universe, and lu status and lu sync push edits and new notes', {
+	timeout: 30_000,
+}, async (t) => {
 	const { folder, read, write, run, state, requests } = await fixture(t)
 	write('Daily/2026-11-21.md', '# Today\n')
 	write('node_modules/pkg/README.md', 'Not a note.\n')
@@ -440,7 +444,9 @@ test('lu init universe lays out the universe, and lu status and lu sync push edi
 	])
 })
 
-test('legacy commands refuse a vault folder and lu sync refuses other folders', async (t) => {
+test('legacy commands refuse a vault folder and lu sync refuses other folders', {
+	timeout: 30_000,
+}, async (t) => {
 	const { folder, run, requests } = await fixture(t)
 	const init = await run(['init', 'story', 'story', '--directory', folder])
 	assert.equal(init.code, 0, init.stderr)
@@ -481,7 +487,9 @@ test('legacy commands refuse a vault folder and lu sync refuses other folders', 
 	assert.ok(existsSync(join(legacy, '01 First Light.md')))
 })
 
-test('lu init binds agent configs to --url without an inherited deployment', async (t) => {
+test('lu init binds agent configs to --url without an inherited deployment', {
+	timeout: 30_000,
+}, async (t) => {
 	const { folder, read, baseUrl, env } = await fixture(t)
 	delete env.LU_BASE_URL
 	const result = await command(
