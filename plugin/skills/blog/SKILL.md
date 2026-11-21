@@ -31,7 +31,8 @@ Read, show, write on approval of exactly that, read back.
   On MARKDOWN_UNSUPPORTED the body holds widgets or formatting Markdown cannot
   carry; leave the body alone or edit it in the web editor.
 - **Translate:** `translate-blog-post` with the content code (such as `cs`). A
-  new translation needs a title and the Markdown; it stays unpublished.
+  new translation needs a title, and the text as Markdown unless the
+  author wants an empty draft; it stays unpublished.
   Changes to a published translation are live at once: say so first.
 - **AI disclosure:** set `isAIGenerated` and `aiModel` only as the author says.
   When you wrote most of the text, ask before saving.
