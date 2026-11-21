@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { readFileSync, statSync } from 'node:fs'
 import type { LiteraryUniverseClient } from '@literary-universe/sdk'
 import { LiteraryUniverseApiError } from '@literary-universe/sdk'
@@ -26,6 +27,9 @@ type CurationArgs = {
 		'ai-generated'?: boolean
 		'ai-model'?: string
 		'expected-version'?: string
+		'operation-id'?: string
+		audience?: string
+		at?: string
 	}
 }
 type Command = () => Promise<unknown>
@@ -106,11 +110,13 @@ function storyCommands(client: LiteraryUniverseClient, args: CurationArgs) {
 			license: v.license,
 			language: v.language,
 			universeId: v.standalone ? null : v.universe,
+			aiModel: v['ai-model'],
 		})
 		const storyId = required(id)
+		const expectedVersion = v['expected-version']
 		return () =>
-			planned(args, 'story-update', { storyId, input })(() =>
-				client.updateStory({ storyId, input }),
+			planned(args, 'story-update', { storyId, input, expectedVersion })(() =>
+				client.updateStory({ storyId, input, expectedVersion }),
 			)
 	}
 	if (verb === 'hide' || verb === 'show') {
@@ -156,8 +162,26 @@ function chapterCommands(client: LiteraryUniverseClient, args: CurationArgs) {
 
 function universeCommands(client: LiteraryUniverseClient, args: CurationArgs) {
 	const [, verb, id] = args.positionals
-	if (verb !== 'update') return
 	const v = args.values
+	if (verb === 'create') {
+		const input = {
+			title: required(v.title),
+			slug: required(v.slug),
+			genre: required(v.genre),
+			rating: required(v.rating),
+			license: required(v.license),
+			language: required(v.language),
+			...given({ description: v.description, aiModel: v['ai-model'] }),
+		}
+		// The SDK never retries creation: a repeat would make a second universe.
+		return () =>
+			planned(
+				args,
+				'universe-create',
+				input,
+			)(() => client.createUniverse(input))
+	}
+	if (verb !== 'update') return
 	const universeId = required(id)
 	const input = given({
 		title: v.title,
@@ -167,10 +191,12 @@ function universeCommands(client: LiteraryUniverseClient, args: CurationArgs) {
 		rating: v.rating,
 		license: v.license,
 		language: v.language,
+		aiModel: v['ai-model'],
 	})
+	const expectedVersion = v['expected-version']
 	return () =>
-		planned(args, 'universe-update', { universeId, input })(() =>
-			client.updateUniverse({ universeId, input }),
+		planned(args, 'universe-update', { universeId, input, expectedVersion })(
+			() => client.updateUniverse({ universeId, input, expectedVersion }),
 		)
 }
 
@@ -194,9 +220,11 @@ function entryCommands(client: LiteraryUniverseClient, args: CurationArgs) {
 	const file = () => jsonFile(required(args.values.file))
 	switch (verb) {
 		case 'create': {
-			const input = { ...file(), universeId: id } as Parameters<
-				LiteraryUniverseClient['createEncyclopediaEntry']
-			>[0]
+			const input = {
+				...file(),
+				...given({ aiModel: args.values['ai-model'] }),
+				universeId: id,
+			} as Parameters<LiteraryUniverseClient['createEncyclopediaEntry']>[0]
 			return () =>
 				planned(args, 'entry-create', {
 					universeId: id,
@@ -204,39 +232,93 @@ function entryCommands(client: LiteraryUniverseClient, args: CurationArgs) {
 				})(() => client.createEncyclopediaEntry(input))
 		}
 		case 'update': {
-			const changes = file() as Parameters<
+			const changes = {
+				...file(),
+				...given({ aiModel: args.values['ai-model'] }),
+			} as Parameters<
 				LiteraryUniverseClient['updateEncyclopediaEntry']
 			>[0]['changes']
+			const expectedVersion = args.values['expected-version']
 			return () =>
-				planned(args, 'entry-update', { id, fields: Object.keys(changes) })(
-					() => client.updateEncyclopediaEntry({ id, changes }),
+				planned(args, 'entry-update', {
+					id,
+					fields: Object.keys(changes),
+					expectedVersion,
+				})(() =>
+					client.updateEncyclopediaEntry({ id, changes, expectedVersion }),
 				)
 		}
 		case 'translate': {
 			const input = {
 				...file(),
+				...given({ expectedVersion: args.values['expected-version'] }),
 				id,
 				language: required(args.values.language),
 			} as Parameters<LiteraryUniverseClient['translateEncyclopediaEntry']>[0]
 			return () =>
-				planned(args, 'entry-translate', { id, language: input.language })(() =>
-					client.translateEncyclopediaEntry(input),
-				)
+				planned(args, 'entry-translate', {
+					id,
+					language: input.language,
+					expectedVersion: input.expectedVersion,
+				})(() => client.translateEncyclopediaEntry(input))
 		}
 		case 'publish':
+			return entryRelease(client, args, id)
 		case 'unpublish':
 			return () =>
-				planned(args, `entry-${verb}`, { id })(() =>
-					client.setEncyclopediaEntryPublication({
-						id,
-						published: verb === 'publish',
-					}),
+				planned(args, 'entry-unpublish', { id })(() =>
+					client.setEncyclopediaEntryPublication({ id, published: false }),
 				)
 		default:
 			return () =>
 				planned(args, 'entry-delete', { id })(() =>
 					client.deleteEncyclopediaEntry({ id }),
 				)
+	}
+}
+
+/** Releases one edition at the version given, or at the one it has now. */
+function entryRelease(
+	client: LiteraryUniverseClient,
+	args: CurationArgs,
+	id: string,
+) {
+	const v = args.values
+	const audience = v.audience ?? 'readers'
+	if (audience !== 'readers' && audience !== 'beta')
+		invalid('Use --audience readers or beta')
+	if (v.at && !(/(?:Z|[+-]\d{2}:?\d{2})$/i.test(v.at) && Date.parse(v.at)))
+		invalid(
+			'--at needs an ISO time with a timezone, such as 2027-01-01T12:00:00Z',
+		)
+	return async () => {
+		let expectedVersion = v['expected-version']
+		const read = !expectedVersion
+		if (read) {
+			const entry = await client.encyclopediaEntry({ id })
+			if (!entry)
+				throw new LiteraryUniverseApiError('NOT_FOUND', 'Entry not found')
+			const language = v.language ?? entry.language
+			expectedVersion =
+				entry.editions.find((edition) => edition.language === language)
+					?.version ?? invalid(`The entry has no ${language} edition`)
+		}
+		const input = {
+			id,
+			...given({ language: v.language, publishAt: v.at }),
+			audience:
+				audience === 'readers' ? ('READERS' as const) : ('BETA' as const),
+			expectedVersion: expectedVersion as string,
+			operationId: v['operation-id'] ?? randomUUID(),
+		}
+		return planned(args, 'entry-publish', {
+			...input,
+			...(read
+				? {
+						note: "expectedVersion is the edition's current version, read just now",
+					}
+				: {}),
+		})(() => client.publishEncyclopediaEntry(input))
 	}
 }
 

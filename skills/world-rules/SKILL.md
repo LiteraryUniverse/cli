@@ -9,7 +9,7 @@ Examine one rule the author names. Explore its consequences before they commit t
 
 ## Gather
 
-- Read the rule as the author states it, and every established use of it: encyclopedia entries through the MCP server (`get-encyclopedia-entry`) and the chapters where it appears.
+- Read the rule as the author states it, and every established use of it: encyclopedia entries (the notes under `Encyclopedia/` in a universe folder, or `get-encyclopedia-entry` through the MCP server) and the chapters where it appears.
 - Note the author's stated intent for the rule, if given.
 
 ## Examine
@@ -31,5 +31,5 @@ Answer each question from canon first, then from inference:
 ## Never
 
 - Present an inference as canon.
-- Write encyclopedia text or add rules the author has not chosen.
+- Write encyclopedia text or add rules the author has not chosen. When the author does ask you to write an entry, set `ai_model: <your exact model id>` in its frontmatter (or pass `--ai-model` / `aiModel`).
 - Rewrite scenes to fit the rule.

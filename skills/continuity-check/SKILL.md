@@ -21,7 +21,7 @@ Separate established facts from beliefs, rumours, lies and plans. A character be
 
 ## Compare
 
-- Compare chapter facts against each other and against the encyclopedia through the MCP server (`list-encyclopedia-entries`, `get-encyclopedia-entry`). The encyclopedia is the author's stated canon; the manuscript may legitimately diverge from an outdated entry.
+- Compare chapter facts against each other and against the encyclopedia: the notes under `Encyclopedia/` in a universe folder set up by `lu init universe`, otherwise the MCP server (`list-encyclopedia-entries`, `get-encyclopedia-entry`). In a story folder, the chapters are the numbered notes next to `Story.md`. The encyclopedia is the author's stated canon; the manuscript may legitimately diverge from an outdated entry.
 - Inflected names and translated terms are the same fact; do not report spelling variants as contradictions.
 
 ## Report

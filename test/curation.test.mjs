@@ -32,6 +32,10 @@ test('CLI curation commands send the named operation with only the given values'
 		requests = []
 	const changes = join(folder, 'changes.json')
 	writeFileSync(changes, '﻿{"summary":"A captain.","tags":["sea"]}')
+	const translation = join(folder, 'translation.json')
+	writeFileSync(translation, '{"name":"Kapitán Nemo"}')
+	const doc = join(folder, 'doc.json')
+	writeFileSync(doc, '{"type":"doc","content":[{"type":"paragraph"}]}')
 	const server = createServer(async (req, res) => {
 		let body = ''
 		for await (const chunk of req) body += chunk
@@ -167,9 +171,193 @@ test('CLI curation commands send the named operation with only the given values'
 			{ id: 'entry', changes: { summary: 'A captain.', tags: ['sea'] } },
 		],
 		[
-			['entry', 'publish', 'entry'],
+			[
+				'entry',
+				'publish',
+				'entry',
+				'--audience',
+				'beta',
+				'--language',
+				'cs',
+				'--at',
+				'2027-01-01T12:00:00+01:00',
+				'--expected-version',
+				'ev3',
+				'--operation-id',
+				'release-1',
+			],
+			'LuPublishEncyclopediaEntry',
+			{
+				input: {
+					id: 'entry',
+					language: 'cs',
+					publishAt: '2027-01-01T12:00:00+01:00',
+					audience: 'BETA',
+					expectedVersion: 'ev3',
+					operationId: 'release-1',
+				},
+			},
+		],
+		[
+			['entry', 'unpublish', 'entry'],
 			'LuSetEncyclopediaEntryPublication',
-			{ id: 'entry', published: true },
+			{ id: 'entry', published: false },
+		],
+		[
+			[
+				'entry',
+				'update',
+				'entry',
+				'--file',
+				changes,
+				'--ai-model',
+				'claude-opus-5-5',
+				'--expected-version',
+				'ev2',
+			],
+			'LuUpdateEncyclopediaEntry',
+			{
+				id: 'entry',
+				changes: {
+					summary: 'A captain.',
+					tags: ['sea'],
+					aiModel: 'claude-opus-5-5',
+				},
+				expectedVersion: 'ev2',
+			},
+		],
+		[
+			['entry', 'create', 'universe', '--file', changes, '--ai-model', 'm'],
+			'LuCreateEncyclopediaEntry',
+			{
+				input: {
+					summary: 'A captain.',
+					tags: ['sea'],
+					aiModel: 'm',
+					universeId: 'universe',
+				},
+			},
+		],
+		[
+			[
+				'entry',
+				'translate',
+				'entry',
+				'--language',
+				'cs',
+				'--file',
+				translation,
+				'--expected-version',
+				'cv1',
+			],
+			'LuTranslateEncyclopediaEntry',
+			{
+				input: {
+					name: 'Kapitán Nemo',
+					expectedVersion: 'cv1',
+					id: 'entry',
+					language: 'cs',
+				},
+			},
+		],
+		[
+			[
+				'universe',
+				'create',
+				'--title',
+				'Deep Sea',
+				'--slug',
+				'deep-sea',
+				'--genre',
+				'fantasy',
+				'--rating',
+				'teen',
+				'--license',
+				'cc-by',
+				'--language',
+				'en',
+				'--ai-model',
+				'm',
+			],
+			'LuCreateUniverse',
+			{
+				input: {
+					title: 'Deep Sea',
+					slug: 'deep-sea',
+					genre: 'fantasy',
+					rating: 'teen',
+					license: 'cc-by',
+					language: 'en',
+					aiModel: 'm',
+				},
+			},
+		],
+		[
+			[
+				'universe',
+				'update',
+				'universe',
+				'--description',
+				'An ocean.',
+				'--ai-model',
+				'm',
+				'--expected-version',
+				'uv1',
+			],
+			'LuUpdateUniverse',
+			{
+				universeId: 'universe',
+				input: { description: 'An ocean.', aiModel: 'm' },
+				expectedVersion: 'uv1',
+			},
+		],
+		[
+			[
+				'story',
+				'update',
+				'story',
+				'--title',
+				'Voyages',
+				'--ai-model',
+				'm',
+				'--expected-version',
+				'sv1',
+			],
+			'LuUpdateStory',
+			{
+				storyId: 'story',
+				input: { title: 'Voyages', aiModel: 'm' },
+				expectedVersion: 'sv1',
+			},
+		],
+		[
+			['create', 'story', '--operation-id', 'op', '--ai-model', 'm'],
+			'LuCreateChapter',
+			{ input: { storyId: 'story', operationId: 'op', aiModel: 'm' } },
+		],
+		[
+			[
+				'save',
+				'chapter',
+				'--file',
+				doc,
+				'--expected-version',
+				'v1',
+				'--operation-id',
+				'op',
+				'--ai-model',
+				'm',
+			],
+			'LuSaveDraft',
+			{
+				input: {
+					id: 'chapter',
+					expectedVersion: 'v1',
+					operationId: 'op',
+					content: { type: 'doc', content: [{ type: 'paragraph' }] },
+					aiModel: 'm',
+				},
+			},
 		],
 		[
 			[
@@ -247,7 +435,66 @@ test('story creation refuses missing metadata and undisclosed AI models locally'
 	}
 })
 
-test('story creation does not retry an ambiguous server failure', async (t) => {
+test('entry publish reads the edition version when none is given and checks --at', async (t) => {
+	const requests = []
+	const server = createServer(async (req, res) => {
+		let body = ''
+		for await (const chunk of req) body += chunk
+		if (!body) return res.end()
+		const request = JSON.parse(body)
+		requests.push(request)
+		res.setHeader('content-type', 'application/json')
+		const result =
+			request.operationName === 'LuEncyclopediaEntry'
+				? {
+						id: 'entry',
+						language: 'en',
+						editions: [
+							{ language: 'en', version: 'ev1' },
+							{ language: 'cs', version: 'cv7' },
+						],
+					}
+				: { operation: request.operationName }
+		res.end(JSON.stringify({ data: { result } }))
+	})
+	await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
+	t.after(() => new Promise((resolve) => server.close(resolve)))
+	const env = {
+		...process.env,
+		LU_TOKEN: 'lu_test_fixture',
+		LU_BASE_URL: `http://127.0.0.1:${server.address().port}`,
+	}
+	const run = await command(
+		['entry', 'publish', 'entry', '--language', 'cs'],
+		env,
+	)
+	assert.equal(run.code, 0, run.stderr)
+	assert.deepEqual(
+		requests.map((request) => request.operationName),
+		['LuEncyclopediaEntry', 'LuPublishEncyclopediaEntry'],
+	)
+	const { input } = requests[1].variables
+	assert.equal(input.expectedVersion, 'cv7')
+	assert.equal(input.audience, 'READERS')
+	assert.match(input.operationId, /^[0-9a-f-]{36}$/)
+	const plan = JSON.parse(run.stderr.split('\n')[0])
+	assert.equal(plan.event, 'entry-publish-plan')
+	assert.equal(plan.operationId, input.operationId)
+	assert.match(plan.note, /current version, read just now/)
+
+	requests.length = 0
+	for (const args of [
+		['entry', 'publish', 'entry', '--at', '2027-01-01T12:00:00'],
+		['entry', 'publish', 'entry', '--audience', 'everyone'],
+	]) {
+		const refused = await command(args, env)
+		assert.equal(refused.code, 1)
+		assert.equal(JSON.parse(refused.stderr).code, 'BAD_USER_INPUT')
+	}
+	assert.equal(requests.length, 0)
+})
+
+test('story and universe creation do not retry an ambiguous server failure', async (t) => {
 	let requests = 0
 	const server = createServer(async (req, res) => {
 		let body = ''
@@ -268,6 +515,37 @@ test('story creation does not retry an ambiguous server failure', async (t) => {
 	})
 	await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
 	t.after(() => new Promise((resolve) => server.close(resolve)))
+	const env = {
+		...process.env,
+		LU_TOKEN: 'lu_test_fixture',
+		LU_BASE_URL: `http://127.0.0.1:${server.address().port}`,
+	}
+	const universe = await command(
+		[
+			'universe',
+			'create',
+			'--title',
+			'Deep Sea',
+			'--slug',
+			'deep-sea',
+			'--genre',
+			'fantasy',
+			'--rating',
+			'teen',
+			'--license',
+			'cc-by',
+			'--language',
+			'en',
+		],
+		env,
+	)
+	assert.equal(universe.code, 1)
+	assert.equal(requests, 1)
+	assert.equal(
+		JSON.parse(universe.stderr.split('\n')[0]).event,
+		'universe-create-plan',
+	)
+	requests = 0
 	const run = await command(
 		[
 			'story',
@@ -287,11 +565,7 @@ test('story creation does not retry an ambiguous server failure', async (t) => {
 			'--license',
 			'cc-by',
 		],
-		{
-			...process.env,
-			LU_TOKEN: 'lu_test_fixture',
-			LU_BASE_URL: `http://127.0.0.1:${server.address().port}`,
-		},
+		env,
 	)
 	assert.equal(run.code, 1)
 	assert.equal(requests, 1)
