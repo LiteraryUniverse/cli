@@ -43,8 +43,10 @@ On VERSION_CONFLICT, read again, show what changed, and ask before writing.
 `publish-blog-post` (now, or at `publishAt`) and `unpublish-blog-post` need
 `confirm: true`. Call them only on the author's explicit go-ahead for that post
 and language in this conversation; without it they only echo the request.
-Publishing notifies the blog's followers. Fan-club tiers, podcasts and
-literary commentary stay in the web editor.
+Publishing notifies the blog's followers. Report `live` from the result: a
+scheduled post, or a translation of an unpublished original, is not visible
+yet. Fan-club tiers, podcasts, literary commentary and posts with blog widgets
+stay in the web editor.
 
 # Blog pages and menus
 

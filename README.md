@@ -479,7 +479,7 @@ translations). Create a draft with:
 | `publish` | `postId`, optional `publishAt` (ISO 8601), optional `language` for one translation |
 | `unpublish` | `postId`, optional `language` |
 
-`post` takes `title`, `slug`, `intro`, the body as `markdown` or Tiptap JSON
+`post` takes `title`, `slug` (lowercase letters, digits, `-` and `_`), `intro`, the body as `markdown` or Tiptap JSON
 `content`, `tags`, `language`, `coverFileId` (a `blog-image` upload for this blog; null
 removes it), `isAIGenerated` and `aiModel`. Omitted fields keep their value.
 A new post whose slug the blog already uses fails with `CONFLICT`, so a
