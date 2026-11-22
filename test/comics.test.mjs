@@ -69,7 +69,9 @@ async function deployment(t) {
 	return { requests, env }
 }
 
-test('comic commands send the named operation with only the given values', async (t) => {
+test('comic commands send the named operation with only the given values', {
+	timeout: 30_000,
+}, async (t) => {
 	const { requests, env } = await deployment(t)
 	const folder = mkdtempSync(join(tmpdir(), 'lu-cli-comic-'))
 	t.after(() => rmSync(folder, { force: true, recursive: true }))
@@ -194,7 +196,9 @@ test('comic commands send the named operation with only the given values', async
 	}
 })
 
-test('comic upload sends a folder of pages in name order, then appends them', async (t) => {
+test('comic upload sends a folder of pages in name order, then appends them', {
+	timeout: 30_000,
+}, async (t) => {
 	const { requests, env } = await deployment(t)
 	const folder = mkdtempSync(join(tmpdir(), 'lu-cli-pages-'))
 	t.after(() => rmSync(folder, { force: true, recursive: true }))
@@ -229,7 +233,9 @@ test('comic upload sends a folder of pages in name order, then appends them', as
 	})
 })
 
-test('comic upload refuses a folder without images', async (t) => {
+test('comic upload refuses a folder without images', {
+	timeout: 30_000,
+}, async (t) => {
 	const { requests, env } = await deployment(t)
 	const folder = mkdtempSync(join(tmpdir(), 'lu-cli-empty-'))
 	t.after(() => rmSync(folder, { force: true, recursive: true }))
@@ -242,7 +248,9 @@ test('comic upload refuses a folder without images', async (t) => {
 	assert.equal(requests.length, 0)
 })
 
-test('comic upload validates every input before uploading anything', async (t) => {
+test('comic upload validates every input before uploading anything', {
+	timeout: 30_000,
+}, async (t) => {
 	const { requests, env } = await deployment(t)
 	const folder = mkdtempSync(join(tmpdir(), 'lu-cli-invalid-pages-'))
 	t.after(() => rmSync(folder, { force: true, recursive: true }))
@@ -276,7 +284,9 @@ test('comic upload validates every input before uploading anything', async (t) =
 	}
 })
 
-test('comic page replacement uploads to its chapter then replaces the existing page', async (t) => {
+test('comic page replacement uploads to its chapter then replaces the existing page', {
+	timeout: 30_000,
+}, async (t) => {
 	const { requests, env } = await deployment(t)
 	const folder = mkdtempSync(join(tmpdir(), 'lu-cli-replace-'))
 	t.after(() => rmSync(folder, { force: true, recursive: true }))

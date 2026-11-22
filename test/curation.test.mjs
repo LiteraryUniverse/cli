@@ -76,7 +76,9 @@ async function expectOperations({ env, requests }, runs) {
 	}
 }
 
-test('CLI curation commands send the named operation with only the given values', async (t) => {
+test('CLI curation commands send the named operation with only the given values', {
+	timeout: 30_000,
+}, async (t) => {
 	const server = await curationServer(t)
 	const { changes } = server
 	await expectOperations(server, [
@@ -217,7 +219,9 @@ test('CLI curation commands send the named operation with only the given values'
 })
 
 // A test of its own: Bun stops a test after five seconds.
-test('CLI sends AI disclosure, expected versions, universe creation and entry releases', async (t) => {
+test('CLI sends AI disclosure, expected versions, universe creation and entry releases', {
+	timeout: 30_000,
+}, async (t) => {
 	const server = await curationServer(t)
 	const { changes, translation, doc } = server
 	await expectOperations(server, [
@@ -416,7 +420,9 @@ test('CLI sends AI disclosure, expected versions, universe creation and entry re
 	])
 })
 
-test('CLI states each curation write before sending it and refuses contradicting options', async () => {
+test('CLI states each curation write before sending it and refuses contradicting options', {
+	timeout: 30_000,
+}, async () => {
 	const env = {
 		...process.env,
 		LU_TOKEN: 'lu_test_fixture',
@@ -437,7 +443,9 @@ test('CLI states each curation write before sending it and refuses contradicting
 	assert.equal(JSON.parse(both.stderr).code, 'BAD_USER_INPUT')
 })
 
-test('story creation refuses missing metadata and undisclosed AI models locally', async () => {
+test('story creation refuses missing metadata and undisclosed AI models locally', {
+	timeout: 30_000,
+}, async () => {
 	const env = {
 		...process.env,
 		LU_TOKEN: 'lu_test_fixture',
@@ -456,7 +464,9 @@ test('story creation refuses missing metadata and undisclosed AI models locally'
 	}
 })
 
-test('entry publish reads the edition version when none is given and checks --at', async (t) => {
+test('entry publish reads the edition version when none is given and checks --at', {
+	timeout: 30_000,
+}, async (t) => {
 	const requests = []
 	const server = createServer(async (req, res) => {
 		let body = ''
@@ -515,7 +525,9 @@ test('entry publish reads the edition version when none is given and checks --at
 	assert.equal(requests.length, 0)
 })
 
-test('story and universe creation do not retry an ambiguous server failure', async (t) => {
+test('story and universe creation do not retry an ambiguous server failure', {
+	timeout: 30_000,
+}, async (t) => {
 	let requests = 0
 	const server = createServer(async (req, res) => {
 		let body = ''

@@ -182,8 +182,10 @@ async function fixture(t, second = false, pull = true) {
 	})
 	const run = (args) => command(args, env)
 	const folder = join(root, 'project')
-	if (pull)
-		assert.equal((await run(['pull', 'story', '--directory', folder])).code, 0)
+	if (pull) {
+		const pulled = await run(['pull', 'story', '--directory', folder])
+		assert.equal(pulled.code, 0, pulled.stderr)
+	}
 	const file = join(folder, 'chapters', 'chapter-chapter.en.json')
 	return { folder, file, run, state }
 }
