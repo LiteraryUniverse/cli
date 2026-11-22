@@ -24,7 +24,7 @@
     "prepack": "npm run build"
   },
   "dependencies": {
-    "@literary-universe/sdk": "github:LiteraryUniverse/sdk-typescript#c5738fe464cba5f8e8eadd5dbad85a0c0b1df0bd",
+    "@literary-universe/sdk": "0.5.1",
     "@modelcontextprotocol/sdk": "1.32.2",
     "sharp": "0.35.5",
     "yaml": "2.9.1",
