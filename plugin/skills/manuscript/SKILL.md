@@ -13,6 +13,15 @@ Every change runs the same loop: read the current state, show the author what
 will change, act on their approval of that exact change, read back, report the
 IDs. Approval covers what was displayed.
 
+**AI disclosure.** Whenever you wrote or rewrote the text you save, pass
+`aiModel` with your exact model id (for example claude-opus-5-5) to
+`create-chapter`, `save-chapter-draft` or `update-story`. Readers see it. Text
+the author wrote and you only carry over goes without it.
+
+**Local folder.** In a folder set up by `lu init`, chapters are Markdown notes:
+edit them and run `lu sync`, as its `AGENTS.md` describes, and set `ai_model`
+in a note's frontmatter when you write its text.
+
 ## New story
 
 1. Call `get-story-creation-options`. If it reports a missing publishing
@@ -31,8 +40,8 @@ IDs. Approval covers what was displayed.
    uncertain response, look for the address in `list-stories` before any
    retry.
 
-New universes, fan fiction and organization-owned stories start in the
-workshop on the website.
+Fan fiction and organization-owned stories start in the workshop on the
+website. For a new universe, see the `encyclopedia-edit` skill.
 
 ## Chapters
 
@@ -42,7 +51,8 @@ workshop on the website.
   Keep a ledger of titles, chapter IDs and operation IDs in the conversation,
   so a broken upload resumes at the first unfinished chapter.
 - **Revise:** `get-chapter-draft`, then `save-chapter-draft` with the whole
-  new body and the `expectedVersion` just read. A save replaces the entire
+  new body, the `expectedVersion` just read and, for your own writing,
+  `aiModel`. A save replaces the entire
   draft, so merge a passage edit into the full text first. On
   `VERSION_CONFLICT`, read again and show the author the competing change.
 - **Keep the author's words.** Upload supplied prose unchanged and ask about

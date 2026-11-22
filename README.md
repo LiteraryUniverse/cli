@@ -1,11 +1,12 @@
 # Literary Universe CLI
 
 Command line tools for authors and local agents using [Literary Universe](https://literaryuniverse.com).
-Sign in from the browser, pull a story into local Markdown and Tiptap JSON
-files, inspect changes offline, validate and push versioned drafts, create
-chapters, and publish or schedule an edition. `lu init` turns a story into a
-folder that Claude Code, Codex or T3 Code can open, with writing skills and an
-MCP server (`lu mcp`) for the same operations. Image preparation and authorized
+Sign in from the browser, turn a story or a whole universe into a folder of
+Markdown notes that `lu sync` keeps in step with Literary Universe in both
+directions, create chapters, stories and universes, and publish or schedule an
+edition. The folder is the same format the Obsidian plugin uses, and
+`lu init` sets it up for Claude Code, Codex or T3 Code too, with writing skills
+and an MCP server (`lu mcp`) for the same operations. Image preparation and authorized
 uploads are also supported. Blog posts, pages and menus can be read and authored with JSON requests. Document
 imports remain to build.
 
@@ -33,7 +34,7 @@ installing, run `npx @literary-universe/cli --help`. The package brings the
 [SDK](https://www.npmjs.com/package/@literary-universe/sdk) and the image engine
 with it; no Literary Universe source checkout is needed.
 
-The CLI uses the published `@literary-universe/sdk` 0.5.0 package.
+The CLI uses the published `@literary-universe/sdk` 0.6.0 package.
 
 To build from source instead, clone this repository, run `npm ci && npm pack`,
 and install the resulting tarball with `npm install --global`.
@@ -45,7 +46,7 @@ If your Windows installation path contains `&`, use `lu.ps1` from PowerShell.
 npm's generated `lu.cmd` wrapper does not quote that path correctly. Running the
 installed `dist/main.js` directly with Node also works.
 
-## Authentication and first pull
+## Authentication and first sync
 
 Sign in from the browser:
 
@@ -105,10 +106,9 @@ Windows PowerShell, use `lu image policy | Out-File -Encoding utf8 .\policy.json
 export LU_BASE_URL=https://literaryuniverse.com
 lu identity
 lu stories
-lu pull STORY_ID --directory ./my-story
+lu init story STORY_ID --directory ./my-story
 lu status --directory ./my-story
-lu push --directory ./my-story
-lu refresh --directory ./my-story
+lu sync --directory ./my-story
 ```
 
 Run `lu` after installing the package, or substitute
@@ -116,21 +116,76 @@ Run `lu` after installing the package, or substitute
 JSON on stdout. Change summaries and errors use newline-delimited JSON on stderr;
 failed or partially successful commands exit with status 1.
 
-## Agent workspaces
+## Local folders
 
 ```sh
-lu init STORY_ID --directory ./my-story
-cd my-story
-claude        # or codex, or open the folder in T3 Code
+lu init story STORY_ID --directory ./my-story
+lu init universe UNIVERSE_ID --directory ./my-universe
+cd my-universe
+claude        # or codex, or open the folder in T3 Code or Obsidian
 ```
 
-`lu init` pulls the story and writes the files a writing agent needs:
+`lu init story` sets up a folder for one story; `lu init universe` for a whole
+universe: its details and translations, every story in it with all chapters in
+every language, the encyclopedia with its translations, the series and the
+comics. `--directory` defaults to the current folder and `--language` syncs
+only that language's editions. A bare `lu init` or `lu init ID` asks in a
+terminal whether to set up a story or a universe; without a terminal it fails
+with `INIT_KIND_REQUIRED`.
+
+`lu init` works in a folder that already has files, such as an Obsidian vault.
+It writes `.lu/vault.json` (the deployment and the story or universe), runs the
+first sync, and then writes the agent files below that are missing. It refuses
+a folder bound to another story, universe or deployment. Running it again
+syncs and writes only what is still missing; the report lists the sync result
+and the files written.
+
+A universe folder looks like this. A story folder is the content of one
+`Stories/<title>/` folder at the root.
+
+| Path | Content |
+| --- | --- |
+| `Universe.md`, `Universe.<lang>.md` | Universe details: frontmatter `title`, `genre`, `rating`, `license`; the body is the description. One file per translation. |
+| `Series.md` | The reading orders. Read only. |
+| `Stories/<title>/Story.md` | Story details: `title`, `genres`, `tags`, `rating`, `license`; the body is the description. |
+| `Stories/<title>/01 Title.md`, `01 Title.<lang>.md` | One note per chapter and language. `title` renames the chapter, `sequence` (from 1) moves it. |
+| `Encyclopedia/<category>/<name>.md`, `<name>.<lang>.md` | Entries: the summary, then a `## Field` section per text field (`## Field (private)` for private ones). `parent` and `related` are `[[wikilinks]]`; the folder is the category. |
+| `Comics/<title>.md` | Comic details. Read only. |
+
+Notes keep their sync state in `lu_*` frontmatter fields, which nobody should
+edit; the body and the other fields are the author's. Notes can be renamed and
+moved. Notes without `lu_kind` are left alone.
+
+```sh
+lu sync [--directory FOLDER]
+lu status [--directory FOLDER]
+```
+
+`lu sync` pulls, then pushes, and prints `{created, updated, pushed,
+conflicts, failures}` as JSON. Every write names the version it was based on,
+so a sync never replaces work saved on Literary Universe meanwhile. It exits
+with status 1 when the report holds conflicts or failures. `lu status` lists
+what the next sync will push (`edited`, `new`, or `conflict`) without
+contacting the server.
+
+- A new note with `lu_kind: chapter` and a `title` in a story folder becomes a
+  new chapter; one with `lu_kind: entry` in `Encyclopedia/<category>/` becomes
+  a new draft entry.
+- A note edited locally while its item changed on Literary Universe stays as
+  it is; the server's version is written beside it as
+  `<name> (Literary Universe).md`. Merge by hand and delete the copy; the note
+  is not pushed while the copy exists.
+- Deleting a note deletes nothing on Literary Universe; the next sync brings
+  it back.
+- `ai_model` in a note's frontmatter is sent with every write of that note and
+  marks the text as written by that model.
+- Syncing never publishes or releases anything.
+
+`lu init` also writes the files a writing agent needs:
 
 | File | Purpose |
 | --- | --- |
-| `chapters/001-title.LOCALE.md` | The chapter drafts, one per chapter and language. Edit these. |
-| `chapters/chapter-ID.LOCALE.json`, `.lu/` | Managed Tiptap JSON copies, manifest and pending writes. Never edit by hand. |
-| `AGENTS.md` | What the folder is, the refresh, edit, status, push loop, and the rule that the agent publishes nothing without the author's go-ahead. |
+| `AGENTS.md` | The folder layout, the sync, edit, status, sync loop, the AI disclosure rule (set `ai_model` in every note the agent writes), and the rule that the agent publishes nothing without the author's go-ahead. There is one version for story folders and one for universe folders. |
 | `CLAUDE.md` | `@AGENTS.md`, so Claude Code reads the same instructions. |
 | `.claude/skills/*/SKILL.md` | The `story-review`, `continuity-check` and `world-rules` writing skills. |
 | `.mcp.json` | Starts `lu mcp` for Claude Code and T3 Code. |
@@ -138,12 +193,14 @@ claude        # or codex, or open the folder in T3 Code
 | `.codex/config.toml` | The same MCP server for Codex in a trusted folder. |
 | `.gitignore` | Ignores `.lu/lock`. |
 
-The folder becomes a git repository with an initial commit when `git` is
-available and it is not already inside one. Running `lu init` again never
-overwrites an existing file; the report lists what was written. Both generated
-MCP configurations include the deployment selected by `--url` or `LU_BASE_URL`.
-For existing configurations, include `--url <deployment>` in the `lu mcp`
-arguments. Use that same option for CLI commands in the workspace.
+A new, empty folder becomes a git repository with an initial commit when
+`git` is available and it is not already inside one. An existing folder, such
+as an Obsidian vault, is left without one: its `.obsidian/` settings can hold
+plugin keys. Both generated MCP configurations
+include the deployment selected by `--url` or `LU_BASE_URL`. `lu sync` refuses
+a folder set up for another deployment, so use that same option for CLI
+commands in the folder. For existing configurations, include
+`--url <deployment>` in the `lu mcp` arguments.
 
 Agent setup:
 
@@ -166,9 +223,9 @@ the CLI nor a local folder. It connects Claude to the hosted MCP server at
 
 | Skill | Use |
 | --- | --- |
-| `setup-project` | Connect the account, choose or create the story, and in Claude Code make a local folder with `lu init`. |
+| `setup-project` | Connect the account, choose or create the story or universe, and in Claude Code make a local folder with `lu init story` or `lu init universe`. |
 | `manuscript` | Create a story, bring text in as chapter drafts, save revisions, reorder chapters, publish. |
-| `encyclopedia-edit` | Add, change, translate and publish encyclopedia entries, universe translations and series. |
+| `encyclopedia-edit` | Create universes; add, change, translate and release encyclopedia entries; universe translations and series. |
 | `comics` | Comics, manga and webtoons: chapters, page order, alt text, lettering. |
 | `blog` | Blog posts on personal and organization blogs: write, translate, publish. Pages and menus through the `lu` CLI in Claude Code. |
 | `writing-feedback` | Proofreading, tone, consistency, developmental, dialogue and worldbuilding feedback. |
@@ -201,9 +258,27 @@ that chapter. Story creation and comic tools appear once the hosted server
 runs an SDK release that has them.
 
 For a local project, ask Claude Code to set one up (the `setup-project` skill
-runs `lu login` and `lu init`). In that folder the plugin's hosted server and
+runs `lu login` and `lu init story` or `lu init universe`). In that folder the plugin's hosted server and
 the folder's `lu mcp` server run side by side: the hosted one has the feedback
 skills, the local one reads files for covers and comic pages.
+
+Whenever the skills write text for you, they pass the AI disclosure with it.
+
+## Legacy `lu pull` folders
+
+```sh
+lu pull STORY_ID --directory ./my-story
+lu status --directory ./my-story
+lu push --directory ./my-story
+lu refresh --directory ./my-story
+```
+
+Folders made by `lu pull`, or by an earlier version of `lu init`, keep working with these
+commands. In a folder set up for `lu sync`, `lu pull`, `lu push` and
+`lu refresh` fail with `VAULT_FOLDER`; `lu status` shows the sync status there.
+To switch a `lu pull` folder to notes, push its changes, then run
+`lu init story STORY_ID` in it. The old `chapters/` folder stays and is no
+longer synced; delete the old `AGENTS.md` first to get the new one.
 
 The Markdown files are the server's own Markdown form of each draft. Pushing a
 changed `.md` sends Markdown and the server converts it with the editor's
@@ -213,8 +288,6 @@ whose `.md` and `.json` both changed is reported with `source: "both"` by
 `lu refresh` re-pulls every chapter into an existing project and reports
 added, updated and removed chapters; it refuses with `LOCAL_CHANGES` while
 anything is unpushed.
-
-## Managed projects
 
 Chapters contain canonical Tiptap JSON in chapters/chapter-ID.LOCALE.json and
 their Markdown mirror in chapters/SEQ-TITLE.LOCALE.md.
@@ -236,7 +309,7 @@ For a single explicit edit:
 
 ```sh
 lu draft CHAPTER_ID
-lu save CHAPTER_ID --file chapter.json --expected-version VERSION --operation-id UNIQUE_ID
+lu save CHAPTER_ID --file chapter.json --expected-version VERSION --operation-id UNIQUE_ID [--ai-model MODEL]
 lu recovery CHAPTER_ID --recovery-id RECOVERY_ID
 ```
 
@@ -256,7 +329,7 @@ lu publish CHAPTER_ID --expected-version VERSION --operation-id BETA_ID --audien
 
 Create appends a draft; the source file stays untouched. Omit --file to create an
 empty draft and --title to use LU's localized title. --ai-generated marks the
-new chapter. New translations are a later workflow; publication can select an
+new chapter; `--ai-model MODEL` marks it as written by that model. New translations are a later workflow; publication can select an
 existing edition with --language.
 
 Publishing requires a separately granted story:publish scope. It uses the exact
@@ -275,6 +348,7 @@ deployment settings or actor allowlist is required.
 ## Curation
 
 ```sh
+lu universe create --title "Deep Sea" --slug deep-sea --genre fantasy --rating teen --license cc-by --language en --description "An ocean world." [--ai-model MODEL]
 lu story update STORY_ID --license cc-by-sa --universe UNIVERSE_ID
 lu story update STORY_ID --title "Title" --genres fantasy,myth --standalone
 lu story hide STORY_ID
@@ -286,15 +360,34 @@ lu universe update UNIVERSE_ID --title "Title" --slug title --genre myth
 lu entries UNIVERSE_ID [--after CURSOR]
 lu entry ENTRY_ID [--language en]
 lu entry create UNIVERSE_ID --file entry.json
-lu entry update ENTRY_ID --file changes.json
-lu entry translate ENTRY_ID --language en --file translation.json
-lu entry publish|unpublish|delete ENTRY_ID
+lu entry update ENTRY_ID --file changes.json --expected-version VERSION
+lu entry translate ENTRY_ID --language en --file translation.json --expected-version VERSION
+lu entry publish ENTRY_ID [--audience readers|beta] [--language cs] [--at 2027-01-01T12:00:00Z] [--expected-version VERSION] [--operation-id ID]
+lu entry unpublish|delete ENTRY_ID
 lu series UNIVERSE_ID
 lu series save UNIVERSE_ID --title "Reading order" --stories ID1,ID2 --expected-version 0 [--series SERIES_ID]
 ```
 
 Story and chapter changes need `story:write`; universe, encyclopedia and series
-changes need `universe:write`, translations `universe:translate`. Only the
+changes need `universe:write`, translations `universe:translate`.
+
+`lu universe create` needs a verified account and a personal key without
+resource restrictions; it creates an unpublished universe and returns its ID
+and slug. Read the choices with `lu story creation-options`. It is never
+retried: after a lost response, look for the slug with `lu universes` before
+trying again.
+
+`--ai-model MODEL` on `lu save`, `lu create`, `lu story update`,
+`lu universe update`, `lu entry create` and `lu entry update` marks the text as
+written by that model; readers see the disclosure. The API only sets the mark;
+removing it is done in the workshop. Agents must pass it whenever they wrote
+the text.
+
+`--expected-version` on `lu story update`, `lu universe update`,
+`lu entry update` and `lu entry translate` takes the `version` from `lu story`,
+`lu universe` or `lu entry` (an entry has one per edition, listed in
+`editions`). The write fails with `VERSION_CONFLICT` when the item changed
+since. Only the
 options you give change. Renames and reordering reach readers at once;
 `--chapters` lists every chapter exactly once. Only a chapter that was never
 published can be removed.
@@ -312,7 +405,16 @@ Encyclopedia input is a JSON object, as the SDK's encyclopedia methods take it:
 }
 ```
 
-New entries are drafts until `lu entry publish`. A taken name fails with
+Readers see released revisions of an entry, not the draft. `lu entry publish`
+releases one edition (the original, or the translation given by `--language`)
+to readers or, with `--audience beta`, to beta readers, now or at `--at`, which
+needs a time with a timezone. Without `--expected-version` it reads the entry
+and releases the edition's current version; the printed plan says so. Without
+`--operation-id` it makes a new one and prints it in the plan; retry a lost
+response with that ID. `lu entry unpublish` returns the entry and all its
+translations to a draft.
+
+New entries are drafts until released. A taken name fails with
 CONFLICT. A translation names fields by their original titles and needs the
 universe translated into that language first. `lu series save` takes the
 version `lu series` reported, 0 for a new series, and fails with
@@ -334,7 +436,8 @@ bun test test
 The tests exercise CLI subprocesses, local files, lost replies, rejected/stale
 writes, deployment/path guards, browser sign-in against a fake OAuth server
 (`LU_BROWSER` points at a script that follows the authorization URL),
-`lu init` in a temporary folder, the `lu mcp` handshake over stdio, and
+`lu init story` and `lu init universe` in a non-empty temporary folder,
+`lu sync` and `lu status` against a fake server, the `lu mcp` handshake over stdio, and
 installation into a clean packed consumer.
 Live LU checks run from the [monorepo](https://github.com/StorytellerCZ/Literary-Universe)
 with `node --experimental-strip-types app/scripts/testApiReadContract.mjs` and a
