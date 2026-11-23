@@ -1,6 +1,6 @@
 {
   "name": "@literary-universe/cli",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "license": "MIT",
   "description": "Literary Universe command line tools for authors and local agents",
   "type": "module",
