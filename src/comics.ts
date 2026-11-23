@@ -3,6 +3,7 @@ import { extname, join } from 'node:path'
 import type { LiteraryUniverseClient } from '@literary-universe/sdk'
 import { IMAGE_POLICY, LiteraryUniverseApiError } from '@literary-universe/sdk'
 
+import { pageSize } from './curation.js'
 import { readBounded } from './images.js'
 
 type ComicArgs = {
@@ -20,6 +21,8 @@ type ComicArgs = {
 		rating?: string
 		slug?: string
 		universe?: string
+		organization?: string
+		first?: string
 		'ai-generated'?: boolean
 		chapters?: string
 		pages?: string
@@ -301,7 +304,13 @@ export function comicCommand(
 ): Command | undefined {
 	const [noun, verb, id] = args.positionals
 	if (noun === 'comics')
-		return () => client.comics({ after: args.values.after })
+		return () =>
+			client.comics({
+				first: pageSize(args.values.first),
+				after: args.values.after,
+				organizationId: args.values.organization,
+				universeId: args.values.universe,
+			})
 	if (noun !== 'comic') return
 	switch (verb) {
 		case 'create':

@@ -185,6 +185,19 @@ test('comic commands send the named operation with only the given values', {
 		],
 		[['comic', 'comic'], 'LuComic', { id: 'comic' }],
 		[['comics'], 'LuComics', {}],
+		[
+			[
+				'comics',
+				'--organization',
+				'press',
+				'--universe',
+				'world',
+				'--first',
+				'5',
+			],
+			'LuComics',
+			{ first: 5, organizationId: 'press', universeId: 'world' },
+		],
 	]
 	for (const [args, operationName, variables] of runs) {
 		requests.length = 0
