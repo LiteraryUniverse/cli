@@ -34,6 +34,11 @@ installing, run `npx @literary-universe/cli --help`. The package brings the
 [SDK](https://www.npmjs.com/package/@literary-universe/sdk) and the image engine
 with it; no Literary Universe source checkout is needed.
 
+To see whether a newer release is out, run `lu update`. It compares the
+installed version with the `latest` tag on npm (or the registry in
+`npm_config_registry`) and prints the install command when an update is
+available. It does not install anything itself.
+
 The CLI uses the published `@literary-universe/sdk` 0.5.1 package.
 
 To build from source instead, clone this repository, run `npm ci && npm pack`,
