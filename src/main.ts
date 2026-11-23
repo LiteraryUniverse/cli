@@ -1,6 +1,10 @@
 #!/usr/bin/env node
+import { spawnSync } from 'node:child_process'
 import { readFileSync, statSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
+import { sep } from 'node:path'
+import { createInterface } from 'node:readline/promises'
+import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
 import {
 	type JsonValue,
@@ -37,7 +41,7 @@ import {
 	unsettled,
 } from './workspace.js'
 
-const help = `Literary Universe CLI\n\nlu identity|profile\nlu stories [--organization <id>] [--universe <id>] [--first <1-100>] [--after <cursor>]\nlu universes [--organization <id>] [--first <1-100>] [--after <cursor>]\nlu story|universe|draft <id>\nlu chapters <story-id> [--language <locale>]\nlu init story <story-id> [--directory <folder>] [--language <locale>]\nlu init universe <universe-id> [--directory <folder>] [--language <locale>]\nlu sync [--directory <folder>]\nlu status [--directory <folder>]\nlu pull <story-id> --directory <new-folder> [--language <locale>]   (legacy format)\nlu refresh|push [--directory <folder>]   (legacy format)\nlu save <chapter-id> --file <tiptap.json> --expected-version <version> --operation-id <id> [--ai-model <model>]\nlu recovery <chapter-id> --recovery-id <id>\nlu create <story-id> --operation-id <id> [--title <title>] [--file <tiptap.json>] [--ai-generated] [--ai-model <model>]\nlu publish <chapter-id> --expected-version <version> --operation-id <id> [--at <ISO-time>] [--audience readers|beta]\nlu image policy\nlu image prepare --file <source> --purpose <purpose> --output <new-file> [--crop x,y,w,h]\nlu image upload <target-id> --file <prepared> --purpose <purpose> --policy-version <version> --operation-id <id>\nlu image cover story|universe|comic <id> --file <image>\nlu story creation-options\nlu story create --title <t> --slug <s> --description <d> --language <locale> --genres <a,b> --rating <r> --license <l> [--universe <id>] [--ai-generated --ai-model <model>]\nlu story update <story-id> [--title <t>] [--description <d>] [--genres <a,b>] [--tags <a,b>] [--rating <r>] [--license <l>] [--language <locale>] [--universe <id>|--standalone] [--ai-model <model>] [--expected-version <v>]\nlu story hide|show <story-id>\nlu chapter rename <chapter-id> --title <title> [--language <locale>]\nlu chapter remove <chapter-id>\nlu chapter reorder <story-id> --chapters <id,id,...>\nlu universe create --title <t> --slug <s> --genre <g> --rating <r> --license <l> --language <locale> --description <d> [--ai-model <model>]\nlu universe update <universe-id> [--title <t>] [--slug <s>] [--description <d>] [--genre <g>] [--rating <r>] [--license <l>] [--language <locale>] [--ai-model <model>] [--expected-version <v>]\nlu entries <universe-id> [--after <cursor>]\nlu entry <entry-id> [--language <locale>]\nlu entry create <universe-id> --file <entry.json> [--ai-model <model>]\nlu entry update <entry-id> --file <changes.json> [--ai-model <model>] [--expected-version <v>]\nlu entry translate <entry-id> --language <locale> --file <translation.json> [--expected-version <v>]\nlu entry publish <entry-id> [--audience readers|beta] [--language <locale>] [--at <ISO-time>] [--expected-version <v>] [--operation-id <id>]\nlu entry unpublish|delete <entry-id>\nlu series <universe-id>\nlu series save <universe-id> --title <t> --stories <id,id,...> --expected-version <n> [--series <id>]\nlu comics [--organization <id>] [--universe <id>] [--first <1-100>] [--after <cursor>]\nlu comic <comic-id>\nlu comic create [--file <metadata.json>] --title <t> --description <d> --format manga|webtoon|comic --license <l> [--language <locale>] [--genres <a,b>] [--tags <a,b>] [--rating <r>] [--universe <id>] [--slug <s>] [--ai-generated]\nlu comic update <comic-id> [--file <changes.json>] [--title <t>] [--description <d>] [--format <f>] [--language <locale>] [--genres <a,b>] [--tags <a,b>] [--rating <r>]\nlu comic chapters <comic-id>\nlu comic chapter create <comic-id> [--title <title>]\nlu comic chapter update <chapter-id> --file <changes.json>\nlu comic chapter rename <chapter-id> --title <title>\nlu comic chapter remove <chapter-id>\nlu comic chapter reorder <comic-id> --chapters <id,id,...>\nlu comic pages <chapter-id>\nlu comic upload <chapter-id> <image>... | --directory <folder>\nlu comic page replace <page-id> --chapter <chapter-id> --file <image>\nlu comic page alt <page-id> --alt <text>\nlu comic page remove <page-id>\nlu comic page reorder <chapter-id> --pages <id,id,...>\nlu comic layer create <page-id> --file <layer.json>\nlu comic layer update <layer-id> --file <changes.json>\nlu comic layer remove <layer-id>\nlu comic publish <chapter-id> [--at <ISO-time>] [--audience readers|beta]\nlu blogs\nlu blog pages <blog-id> [--first <1-100>] [--after <last-page-id>]\nlu blog menus <blog-id>\nlu blog mutate <blog-id> --file <mutation.json>\nlu blog posts <blog-id> [--first <1-100>] [--after <last-post-id>]\nlu blog post <post-id>\nlu blog mutate-post <blog-id> --file <mutation.json>\nlu auth store|remove\nlu login|logout [--url <deployment>]\nlu mcp [--tools <category,tool,...>] [--url <deployment>]\n\nlu login signs in through the browser and keeps a refreshable session in the\nOS credential store. Set LU_TOKEN or provide a key through stdin to lu auth store. Keys are stored\nin the OS credential store for the selected deployment. Select it with --url\nor LU_BASE_URL. Output is JSON. Stripe settings are managed on the web.\n`
+const help = `Literary Universe CLI\n\nlu identity|profile\nlu stories [--organization <id>] [--universe <id>] [--first <1-100>] [--after <cursor>]\nlu universes [--organization <id>] [--first <1-100>] [--after <cursor>]\nlu story|universe|draft <id>\nlu chapters <story-id> [--language <locale>]\nlu init story <story-id> [--directory <folder>] [--language <locale>]\nlu init universe <universe-id> [--directory <folder>] [--language <locale>]\nlu sync [--directory <folder>]\nlu status [--directory <folder>]\nlu pull <story-id> --directory <new-folder> [--language <locale>]   (legacy format)\nlu refresh|push [--directory <folder>]   (legacy format)\nlu save <chapter-id> --file <tiptap.json> --expected-version <version> --operation-id <id> [--ai-model <model>]\nlu recovery <chapter-id> --recovery-id <id>\nlu create <story-id> --operation-id <id> [--title <title>] [--file <tiptap.json>] [--ai-generated] [--ai-model <model>]\nlu publish <chapter-id> --expected-version <version> --operation-id <id> [--at <ISO-time>] [--audience readers|beta]\nlu image policy\nlu image prepare --file <source> --purpose <purpose> --output <new-file> [--crop x,y,w,h]\nlu image upload <target-id> --file <prepared> --purpose <purpose> --policy-version <version> --operation-id <id>\nlu image cover story|universe|comic <id> --file <image>\nlu story creation-options\nlu story create --title <t> --slug <s> --description <d> --language <locale> --genres <a,b> --rating <r> --license <l> [--universe <id>] [--ai-generated --ai-model <model>]\nlu story update <story-id> [--title <t>] [--description <d>] [--genres <a,b>] [--tags <a,b>] [--rating <r>] [--license <l>] [--language <locale>] [--universe <id>|--standalone] [--ai-model <model>] [--expected-version <v>]\nlu story hide|show <story-id>\nlu chapter rename <chapter-id> --title <title> [--language <locale>]\nlu chapter remove <chapter-id>\nlu chapter reorder <story-id> --chapters <id,id,...>\nlu universe create --title <t> --slug <s> --genre <g> --rating <r> --license <l> --language <locale> --description <d> [--ai-model <model>]\nlu universe update <universe-id> [--title <t>] [--slug <s>] [--description <d>] [--genre <g>] [--rating <r>] [--license <l>] [--language <locale>] [--ai-model <model>] [--expected-version <v>]\nlu entries <universe-id> [--after <cursor>]\nlu entry <entry-id> [--language <locale>]\nlu entry create <universe-id> --file <entry.json> [--ai-model <model>]\nlu entry update <entry-id> --file <changes.json> [--ai-model <model>] [--expected-version <v>]\nlu entry translate <entry-id> --language <locale> --file <translation.json> [--expected-version <v>]\nlu entry publish <entry-id> [--audience readers|beta] [--language <locale>] [--at <ISO-time>] [--expected-version <v>] [--operation-id <id>]\nlu entry unpublish|delete <entry-id>\nlu series <universe-id>\nlu series save <universe-id> --title <t> --stories <id,id,...> --expected-version <n> [--series <id>]\nlu comics [--organization <id>] [--universe <id>] [--first <1-100>] [--after <cursor>]\nlu comic <comic-id>\nlu comic create [--file <metadata.json>] --title <t> --description <d> --format manga|webtoon|comic --license <l> [--language <locale>] [--genres <a,b>] [--tags <a,b>] [--rating <r>] [--universe <id>] [--slug <s>] [--ai-generated]\nlu comic update <comic-id> [--file <changes.json>] [--title <t>] [--description <d>] [--format <f>] [--language <locale>] [--genres <a,b>] [--tags <a,b>] [--rating <r>]\nlu comic chapters <comic-id>\nlu comic chapter create <comic-id> [--title <title>]\nlu comic chapter update <chapter-id> --file <changes.json>\nlu comic chapter rename <chapter-id> --title <title>\nlu comic chapter remove <chapter-id>\nlu comic chapter reorder <comic-id> --chapters <id,id,...>\nlu comic pages <chapter-id>\nlu comic upload <chapter-id> <image>... | --directory <folder>\nlu comic page replace <page-id> --chapter <chapter-id> --file <image>\nlu comic page alt <page-id> --alt <text>\nlu comic page remove <page-id>\nlu comic page reorder <chapter-id> --pages <id,id,...>\nlu comic layer create <page-id> --file <layer.json>\nlu comic layer update <layer-id> --file <changes.json>\nlu comic layer remove <layer-id>\nlu comic publish <chapter-id> [--at <ISO-time>] [--audience readers|beta]\nlu blogs\nlu blog pages <blog-id> [--first <1-100>] [--after <last-page-id>]\nlu blog menus <blog-id>\nlu blog mutate <blog-id> --file <mutation.json>\nlu blog posts <blog-id> [--first <1-100>] [--after <last-post-id>]\nlu blog post <post-id>\nlu blog mutate-post <blog-id> --file <mutation.json>\nlu auth store|remove\nlu login|logout [--url <deployment>]\nlu update [--yes]   (checks npm for a newer CLI and offers to install it)\nlu mcp [--tools <category,tool,...>] [--url <deployment>]\n\nlu login signs in through the browser and keeps a refreshable session in the\nOS credential store. Set LU_TOKEN or provide a key through stdin to lu auth store. Keys are stored\nin the OS credential store for the selected deployment. Select it with --url\nor LU_BASE_URL. Output is JSON. Stripe settings are managed on the web.\n`
 
 const options = {
 	url: { type: 'string' },
@@ -78,6 +82,7 @@ const options = {
 	after: { type: 'string' },
 	tools: { type: 'string' },
 	help: { type: 'boolean', short: 'h' },
+	yes: { type: 'boolean', short: 'y' },
 } as const
 const parse = () => parseArgs({ allowPositionals: true, options })
 type Args = ReturnType<typeof parse> & { directory: string; baseUrl: string }
@@ -320,6 +325,86 @@ function argumentsFor(parsed: ReturnType<typeof parse>): Args {
 const { version } = JSON.parse(
 	readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
 ) as { version: string }
+const packageName = '@literary-universe/cli'
+const numbers = (v: string) => v.split('-')[0].split('.').map(Number)
+/** True when `latest` is a newer release than `current` (a prerelease sorts before its release). */
+function isNewer(latest: string, current: string) {
+	const [a, b] = [numbers(latest), numbers(current)]
+	for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] > b[i]
+	return current.includes('-') && !latest.includes('-')
+}
+
+async function updateCheck() {
+	// npm exports npm_config_registry to scripts; honour it for mirrors and tests.
+	const registry = (
+		process.env.npm_config_registry ?? 'https://registry.npmjs.org'
+	).replace(/\/$/, '')
+	const response = await fetch(`${registry}/${packageName}/latest`, {
+		signal: AbortSignal.timeout(10_000),
+	}).catch(() => undefined)
+	const latest = response?.ok
+		? ((await response.json()) as { version?: string }).version
+		: undefined
+	if (!latest)
+		throw new LiteraryUniverseApiError(
+			'UPDATE_CHECK_FAILED',
+			`Could not read the latest version from ${registry}`,
+		)
+	const updateAvailable = isNewer(latest, version)
+	// A Bun global install lives under ~/.bun; anything else came from npm.
+	const [tool, ...install] = fileURLToPath(import.meta.url).includes(
+		`${sep}.bun${sep}`,
+	)
+		? ['bun', 'add', '--global', `${packageName}@latest`]
+		: ['npm', 'install', '--global', `${packageName}@latest`]
+	return {
+		current: version,
+		latest,
+		updateAvailable,
+		...(updateAvailable && { command: [tool, ...install].join(' ') }),
+		tool,
+		install,
+	}
+}
+
+async function confirm(question: string) {
+	const prompt = createInterface({
+		input: process.stdin,
+		output: process.stderr,
+	})
+	// Ctrl+C or Ctrl+D at the prompt closes it, which counts as no.
+	const answer = await prompt
+		.question(question)
+		.catch(() => '')
+		.finally(() => prompt.close())
+	return /^y(es)?$/i.test(answer.trim())
+}
+
+async function update(args: Args) {
+	const { tool, install, ...result } = await updateCheck()
+	const interactive = process.stdin.isTTY && process.stderr.isTTY
+	if (!result.updateAvailable) return output(result)
+	if (interactive)
+		process.stderr.write(
+			`lu ${result.latest} is available (installed: ${result.current}). To update, run:\n\n  ${result.command}\n\n`,
+		)
+	if (
+		!args.values.yes &&
+		!(interactive && (await confirm('Update now? [y/N] ')))
+	)
+		return output(result)
+	// npm's progress goes to stderr so stdout stays a single JSON result.
+	// Windows starts npm through its npm.cmd shim, which needs a shell; the
+	// arguments are fixed strings.
+	const run = spawnSync(tool, install, {
+		stdio: ['inherit', 2, 2],
+		shell: process.platform === 'win32',
+	})
+	const updated = run.status === 0
+	if (!updated) process.exitCode = 1
+	output({ ...result, updated })
+}
+
 const clientFor = (baseUrl: string) =>
 	new LiteraryUniverseClient({
 		baseUrl,
@@ -350,6 +435,7 @@ async function main() {
 			'VAULT_FOLDER',
 			`This folder syncs with lu sync; lu ${args.positionals[0]} works only in folders made by lu pull`,
 		)
+	if (args.positionals[0] === 'update') return update(args)
 	if (args.positionals[0] === 'auth') return auth(args)
 	if (['login', 'logout'].includes(args.positionals[0])) return session(args)
 	if (args.positionals[0] === 'mcp') return mcp(args)
