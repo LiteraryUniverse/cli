@@ -34,10 +34,12 @@ installing, run `npx @literary-universe/cli --help`. The package brings the
 [SDK](https://www.npmjs.com/package/@literary-universe/sdk) and the image engine
 with it; no Literary Universe source checkout is needed.
 
-To see whether a newer release is out, run `lu update`. It compares the
-installed version with the `latest` tag on npm (or the registry in
-`npm_config_registry`) and prints the install command when an update is
-available. It does not install anything itself.
+To update, run `lu update`. It compares the installed version with the
+`latest` tag on npm (or the registry in `npm_config_registry`). When a newer
+release is out, it shows the install command to copy and asks whether to run it
+now. `lu update --yes` installs without asking, which suits scripts and agents.
+Without a terminal and without `--yes`, it only reports the versions and the
+command. A Bun global install updates with `bun add --global`.
 
 The CLI uses the published `@literary-universe/sdk` 0.5.1 package.
 
