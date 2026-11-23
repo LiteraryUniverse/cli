@@ -20,6 +20,7 @@ type ComicArgs = {
 		rating?: string
 		slug?: string
 		universe?: string
+		organization?: string
 		'ai-generated'?: boolean
 		chapters?: string
 		pages?: string
@@ -301,7 +302,12 @@ export function comicCommand(
 ): Command | undefined {
 	const [noun, verb, id] = args.positionals
 	if (noun === 'comics')
-		return () => client.comics({ after: args.values.after })
+		return () =>
+			client.comics({
+				after: args.values.after,
+				organizationId: args.values.organization,
+				universeId: args.values.universe,
+			})
 	if (noun !== 'comic') return
 	switch (verb) {
 		case 'create':

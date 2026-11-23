@@ -111,6 +111,11 @@ lu status --directory ./my-story
 lu sync --directory ./my-story
 ```
 
+`lu stories`, `lu universes` and `lu comics` list your own works. An
+organization's works are listed only when you name it with
+`--organization ORGANIZATION_ID`, or name the universe with `--universe
+UNIVERSE_ID` (stories and comics). Page with `--first` and `--after`.
+
 Run `lu` after installing the package, or substitute
 `node dist/main.js` or `bun dist/main.js` during development. Output is
 JSON on stdout. Change summaries and errors use newline-delimited JSON on stderr;

@@ -341,7 +341,7 @@ function seriesCommands(client: LiteraryUniverseClient, args: CurationArgs) {
 		planned(args, 'series-save', input)(() => client.saveSeries(input))
 }
 
-function pageSize(value?: string) {
+export function pageSize(value?: string) {
 	const first = value === undefined ? undefined : Number(value)
 	if (first !== undefined && (!Number.isInteger(first) || first < 1 || first > 100))
 		invalid('--first must be a whole number between 1 and 100')
