@@ -41,7 +41,7 @@ now. `lu update --yes` installs without asking, which suits scripts and agents.
 Without a terminal and without `--yes`, it only reports the versions and the
 command. A Bun global install updates with `bun add --global`.
 
-The CLI uses the published `@literary-universe/sdk` 0.5.1 package.
+The CLI uses the published `@literary-universe/sdk` 0.5.2 package.
 
 To build from source instead, clone this repository, run `npm ci && npm pack`,
 and install the resulting tarball with `npm install --global`.
