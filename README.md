@@ -114,8 +114,8 @@ lu sync --directory ./my-story
 `lu stories`, `lu universes` and `lu comics` list the works you write that
 belong to no organization. An organization's works are listed only when you
 name it with `--organization ORGANIZATION_ID`, or name the universe with
-`--universe UNIVERSE_ID` (stories and comics). Page with `--first` and
-`--after`.
+`--universe UNIVERSE_ID` (stories and comics). An organization key lists
+its organization's stories and universes. Page with `--first` and `--after`.
 
 Run `lu` after installing the package, or substitute
 `node dist/main.js` or `bun dist/main.js` during development. Output is
