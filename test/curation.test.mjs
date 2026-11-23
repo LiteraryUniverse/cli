@@ -83,6 +83,12 @@ test('CLI curation commands send the named operation with only the given values'
 	const { changes } = server
 	await expectOperations(server, [
 		[['story', 'creation-options'], 'LuStoryCreationOptions', {}],
+		// Only the listings read --first; another command is not refused over it.
+		[
+			['story', 'creation-options', '--first', 'nope'],
+			'LuStoryCreationOptions',
+			{},
+		],
 		// Listings name an organization or universe only when asked to.
 		[['stories'], 'LuStories', {}],
 		[

@@ -133,17 +133,17 @@ function reads(client: LiteraryUniverseClient, args: Args) {
 	const id = args.positionals[1],
 		language = args.values.language
 	// Organization works are listed only when --organization or --universe asks for them.
-	const page = {
+	const page = () => ({
 		first: pageSize(args.values.first),
 		after: args.values.after,
 		organizationId: args.values.organization,
-	}
+	})
 	const handlers: Record<string, () => Promise<unknown>> = {
 		identity: () => client.identity(),
 		profile: () => client.profile(),
 		stories: () =>
-			client.stories({ ...page, universeId: args.values.universe }),
-		universes: () => client.universes(page),
+			client.stories({ ...page(), universeId: args.values.universe }),
+		universes: () => client.universes(page()),
 		story: () => client.story({ id: required(id) }),
 		universe: () => client.universe({ id: required(id) }),
 		chapters: () => client.chapters({ storyId: required(id), language }),
