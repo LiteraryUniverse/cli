@@ -120,6 +120,15 @@ test('packed CLI installs and runs without a sibling SDK or Meteor application',
 		installPackage(folder)
 		assertHelp(folder)
 		assertInstalledBin(folder)
+		const { version } = JSON.parse(
+			readFileSync(join(root, 'package.json'), 'utf8'),
+		)
+		for (const flag of ['-v', '--version']) {
+			const result = installedCli(folder, [flag])
+			assert.equal(result.status, 0, result.stderr)
+			assert.equal(result.stdout, `${version}\n`)
+			assert.equal(result.stderr, '')
+		}
 		const bytes = await sampleImage()
 		await assertPreparation(folder, bytes)
 		await assertCommonJs(folder, bytes)
