@@ -7,7 +7,7 @@ const root = new URL('../', import.meta.url)
 const read = (path) => readFileSync(new URL(path, root), 'utf8')
 const plugin = JSON.parse(read('plugin/.claude-plugin/plugin.json'))
 // Served by the hosted endpoint itself, not by the SDK.
-const HOSTED = ['load-writing-skill', 'load-universe-skill']
+const HOSTED = ['load-writing-skill', 'load-universe-skill', 'load-persona']
 const skills = readdirSync(new URL('plugin/skills', root))
 
 test('the plugin connects to hosted tool categories the SDK knows', () => {
