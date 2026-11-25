@@ -30,7 +30,7 @@ type CurationArgs = {
 		'operation-id'?: string
 		audience?: string
 		at?: string
-	}
+	} & { [note: string]: string | boolean | undefined }
 }
 type Command = () => Promise<unknown>
 
@@ -72,10 +72,98 @@ function planned(args: CurationArgs, event: string, plan: object) {
 	}
 }
 
+/** The notes of a story's overview and of a universe, as the API names them. */
+export const STORY_NOTES = [
+	'concept',
+	'settings',
+	'theme',
+	'impact',
+	'outcome',
+	'audience',
+	'audienceAgeGroup',
+	'audienceSex',
+	'pitch',
+	'notes',
+]
+export const UNIVERSE_NOTES = [
+	'overview',
+	'foundation',
+	'society',
+	'conflicts',
+	'keyLocations',
+	'storyHooks',
+	'notes',
+]
+/** The option of a note: `keyLocations` is `--key-locations`. */
+export const noteOption = (field: string) =>
+	field.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
+
+type Notes = Record<string, string | null> & { version: string }
+/**
+ * `notes <id>` prints the notes as Markdown; `notes update <id>` changes the
+ * ones given as options or in a JSON file, which may be the printed notes
+ * edited: its `version` is the expected version unless the option names one.
+ */
+function notesCommands(
+	args: CurationArgs,
+	noun: 'story' | 'universe',
+	fields: string[],
+	read: (id: string) => Promise<{ notes: Notes | null } | null>,
+	write: (
+		id: string,
+		input: Record<string, string | null>,
+		expectedVersion?: string,
+	) => Promise<Notes>,
+) {
+	const [, , verb, target] = args.positionals
+	if (verb !== 'update' || !target)
+		return async () => (await read(required(verb)))?.notes ?? null
+	const { version, ...file } = args.values.file
+		? jsonFile(args.values.file)
+		: {}
+	const input = {
+		...file,
+		...given(
+			Object.fromEntries(
+				fields.map((field) => [field, args.values[noteOption(field)]]),
+			),
+		),
+	} as Record<string, string | null>
+	// A note of the other kind, such as --concept for a universe, is refused too.
+	const unknown = [
+		...Object.keys(input),
+		...[...STORY_NOTES, ...UNIVERSE_NOTES].filter(
+			(field) => args.values[noteOption(field)] !== undefined,
+		),
+	].filter((name, at, all) => !fields.includes(name) && all.indexOf(name) === at)
+	if (unknown.length)
+		invalid(`Unknown note ${unknown.join(', ')}; use ${fields.join(', ')}`)
+	if (!Object.keys(input).length)
+		invalid('Give at least one note to change, as an option or in --file')
+	const expectedVersion =
+		args.values['expected-version'] ??
+		(typeof version === 'string' ? version : undefined)
+	return () =>
+		planned(args, `${noun}-notes-update`, {
+			[`${noun}Id`]: target,
+			fields: Object.keys(input),
+			expectedVersion,
+		})(() => write(target, input, expectedVersion))
+}
+
 function storyCommands(client: LiteraryUniverseClient, args: CurationArgs) {
 	const [, verb, id] = args.positionals
 	const v = args.values
 	if (verb === 'creation-options') return () => client.storyCreationOptions()
+	if (verb === 'notes')
+		return notesCommands(
+			args,
+			'story',
+			STORY_NOTES,
+			(id) => client.storyNotes({ id }),
+			(storyId, input, expectedVersion) =>
+				client.updateStoryNotes({ storyId, input, expectedVersion }),
+		)
 	if (verb === 'create') {
 		const isAIGenerated = v['ai-generated'] ?? false
 		if (isAIGenerated && !v['ai-model']?.trim())
@@ -182,6 +270,15 @@ function universeCommands(client: LiteraryUniverseClient, args: CurationArgs) {
 				input,
 			)(() => client.createUniverse(input))
 	}
+	if (verb === 'notes')
+		return notesCommands(
+			args,
+			'universe',
+			UNIVERSE_NOTES,
+			(id) => client.universeNotes({ id }),
+			(universeId, input, expectedVersion) =>
+				client.updateUniverseNotes({ universeId, input, expectedVersion }),
+		)
 	if (verb !== 'update') return
 	const universeId = required(id)
 	const input = given({

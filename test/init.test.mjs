@@ -271,6 +271,9 @@ test('lu init story syncs into an existing folder and writes the agent workspace
 		/"The Long Night"\n\(id `story`\), set up by `lu init story`/,
 	)
 	assert.match(agents, /ai_model: <your exact model id>/)
+	// The overview notes are outside the folder; the agent learns their commands.
+	assert.match(agents, /`lu story notes story` prints them/)
+	assert.match(agents, /`lu story notes update story --concept/)
 	assert.ok(!agents.includes('{{'))
 	assert.equal(read('CLAUDE.md'), '@AGENTS.md\n')
 	assert.deepEqual(JSON.parse(read('.mcp.json')), {
@@ -360,6 +363,7 @@ test('lu init universe lays out the universe, and lu status and lu sync push edi
 		'Universe.md',
 	])
 	assert.match(read('AGENTS.md'), /set up by `lu init universe`/)
+	assert.match(read('AGENTS.md'), /`lu universe notes \w+` prints them/)
 	assert.match(read('AGENTS.md'), /Encyclopedia\/<category>\/<name>\.md/)
 	assert.match(
 		read('Encyclopedia/Characters/Nemo.md'),

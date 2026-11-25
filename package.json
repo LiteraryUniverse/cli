@@ -1,6 +1,6 @@
 {
   "name": "@literary-universe/cli",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "license": "MIT",
   "description": "Literary Universe command line tools for authors and local agents",
   "type": "module",
@@ -24,7 +24,7 @@
     "prepack": "npm run build"
   },
   "dependencies": {
-    "@literary-universe/sdk": "0.5.2",
+    "@literary-universe/sdk": "github:LiteraryUniverse/sdk-typescript#d4de9d756499296f7ed0eea803ecda900579c387",
     "@modelcontextprotocol/sdk": "1.32.2",
     "sharp": "0.35.5",
     "yaml": "2.9.1",

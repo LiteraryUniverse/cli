@@ -70,6 +70,35 @@ is set. The MCP server already includes this option.
   it back. Removing chapters or entries needs `lu chapter remove` or
   `lu entry delete` and the author's go-ahead.
 
+## Universe notes and story overview notes
+
+The author's intent lives in two sets of planning notes that the in-app AI
+Assistant reads too. They are not notes in this folder and `lu sync` does not
+carry them.
+
+- Universe notes, the workshop's Universe notes page: `overview`,
+  `foundation`, `society`, `conflicts`, `keyLocations`, `storyHooks` and
+  `notes`. `lu universe notes {{id}}` prints them as JSON; each note is
+  Markdown, `null` when empty.
+  `lu universe notes update {{id}} --overview "..." --story-hooks "..."`
+  changes the notes given and leaves the others.
+- A story's overview notes, the workshop's Overview page: `concept`,
+  `settings`, `theme`, `impact`, `outcome`, `audience`, `audienceAgeGroup`,
+  `audienceSex`, `pitch` and `notes`. `lu story notes <story-id>` prints them
+  and `lu story notes update <story-id> --concept "..."` changes them. The
+  story's id is `lu_id` in its `Story.md`.
+- Every note has an option (`--key-locations`, `--audience-age-group`, ...).
+  An empty text empties a note. A text that starts with a dash, such as a
+  Markdown list, needs the `--option=value` form or a file. For longer text,
+  save the printed JSON to a file, edit it, and send it with
+  `--file notes.json`. Its `version` guards
+  against notes changed on Literary Universe meanwhile (`VERSION_CONFLICT`:
+  read again and merge).
+
+Read them before giving feedback or planning. Change them only when the
+author settled the wording with you; they are the author's own statement of
+intent.
+
 ## AI disclosure
 
 Readers see which texts an AI wrote. Whenever you write or rewrite text in a

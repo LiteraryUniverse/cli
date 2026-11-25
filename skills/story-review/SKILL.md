@@ -10,7 +10,7 @@ Give developmental feedback. Diagnose; do not rewrite.
 ## Before reading
 
 - Ask what the author wants from this pass if it is not stated: whole story, one chapter, or a selection.
-- Read the author's notes and the story description (`Story.md` and the chapter notes in a folder set up by `lu init`, or `get-story` through the MCP server) so feedback measures the text against the author's goals, not yours.
+- Read the author's notes and the story description (`Story.md` and the chapter notes in a folder set up by `lu init`, or `get-story` through the MCP server) so feedback measures the text against the author's goals, not yours. The story's overview notes hold those goals: concept, theme, intended impact and outcome, audience and pitch. `lu story notes <story-id>` prints them; the id is `lu_id` in `Story.md`.
 
 ## Review
 

@@ -10,7 +10,7 @@ Examine one rule the author names. Explore its consequences before they commit t
 ## Gather
 
 - Read the rule as the author states it, and every established use of it: encyclopedia entries (the notes under `Encyclopedia/` in a universe folder, or `get-encyclopedia-entry` through the MCP server) and the chapters where it appears.
-- Note the author's stated intent for the rule, if given.
+- Note the author's stated intent for the rule, if given. The universe notes (`lu universe notes <universe-id>`; the id is `lu_id` in `Universe.md`) hold the foundation, society and conflicts the author planned.
 
 ## Examine
 
