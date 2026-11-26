@@ -49,6 +49,30 @@ is set. The MCP server already includes this option.
   it back. Removing a chapter needs `lu chapter remove` and the author's
   go-ahead.
 
+## Overview notes
+
+The author's intent for the story lives in its overview notes, the Overview
+page of the workshop: `concept`, `settings`, `theme`, `impact`, `outcome`,
+`audience`, `audienceAgeGroup`, `audienceSex`, `pitch` and `notes`. The
+in-app AI Assistant reads them too. They are not notes in this folder and
+`lu sync` does not carry them.
+
+- `lu story notes {{id}}` prints them as JSON; each note is Markdown, `null`
+  when empty.
+- `lu story notes update {{id}} --concept "..." --theme "..."` changes the
+  notes given and leaves the others. Every note has an option
+  (`--audience-age-group`, `--audience-sex`, ...). An empty text empties a
+  note. A text that starts with a dash, such as a Markdown list, needs the
+  `--option=value` form or the file below.
+- For longer text, save the printed JSON to a file, edit it, and send it with
+  `lu story notes update {{id}} --file notes.json`. Its `version` guards
+  against notes changed on Literary Universe meanwhile (`VERSION_CONFLICT`:
+  read again and merge).
+
+Read them before giving feedback or planning. Change them only when the
+author settled the wording with you; they are the author's own statement of
+intent.
+
 ## AI disclosure
 
 Readers see which texts an AI wrote. Whenever you write or rewrite text in a

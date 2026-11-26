@@ -66,6 +66,14 @@ that read local files: `set-cover`, `upload-comic-pages` and
 `replace-comic-page-image`. Inside the folder, change text through the notes
 and `lu sync`, so folder and server stay in step.
 
+The planning notes that state the author's intent are not in the folder: a
+story's overview notes (concept, settings, theme, impact, outcome, audience,
+pitch) and a universe's notes (overview, foundation, society, conflicts, key
+locations, story hooks). `lu story notes <story-id>` and
+`lu universe notes <universe-id>` print them as Markdown in JSON, and
+`lu story notes update` and `lu universe notes update` change the ones given,
+as options such as `--concept` or from `--file notes.json`.
+
 A folder made by an older `lu init` or by `lu pull` (with a `chapters/`
 folder) keeps working with `lu refresh`, `lu status` and `lu push`. Running
 `lu init story` for the same story there switches it to the notes format once

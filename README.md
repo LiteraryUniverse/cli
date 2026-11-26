@@ -169,6 +169,11 @@ Notes keep their sync state in `lu_*` frontmatter fields, which nobody should
 edit; the body and the other fields are the author's. Notes can be renamed and
 moved. Notes without `lu_kind` are left alone.
 
+A story's overview notes and a universe's notes (concept, theme, pitch,
+foundation, story hooks and the like) are not in the folder. Read and change
+them with `lu story notes` and `lu universe notes`, described under
+[Curation](#curation).
+
 ```sh
 lu sync [--directory FOLDER]
 lu status [--directory FOLDER]
@@ -366,10 +371,16 @@ lu story update STORY_ID --license cc-by-sa --universe UNIVERSE_ID
 lu story update STORY_ID --title "Title" --genres fantasy,myth --standalone
 lu story hide STORY_ID
 lu story show STORY_ID
+lu story notes STORY_ID
+lu story notes update STORY_ID --concept "A keeper signals ships that no longer come." --audience-age-group 18to20
+lu story notes update STORY_ID --file notes.json [--expected-version VERSION]
 lu chapter rename CHAPTER_ID --title "Chapter One" [--language cs]
 lu chapter reorder STORY_ID --chapters ID3,ID1,ID2
 lu chapter remove CHAPTER_ID
 lu universe update UNIVERSE_ID --title "Title" --slug title --genre myth
+lu universe notes UNIVERSE_ID
+lu universe notes update UNIVERSE_ID --overview "Tides rule the coast." --key-locations="- The Lamp"
+lu universe notes update UNIVERSE_ID --file notes.json [--expected-version VERSION]
 lu entries UNIVERSE_ID [--after CURSOR]
 lu entry ENTRY_ID [--language en]
 lu entry create UNIVERSE_ID --file entry.json
@@ -405,6 +416,37 @@ options you give change. Renames and reordering reach readers at once;
 `--chapters` lists every chapter exactly once. Only a chapter that was never
 published can be removed.
 A story whose arcs or free preview count chapters keeps its structure.
+
+`lu story notes` prints a story's overview notes and `lu universe notes` a
+universe's notes: the planning notes of the workshop's Overview and Universe
+notes pages, which the AI Assistant reads as the author's intent. They are not
+part of a synced folder. Each note is Markdown, `null` when empty:
+
+| Command | Notes |
+| --- | --- |
+| `lu story notes` | `concept`, `settings`, `theme`, `impact`, `outcome`, `audience`, `pitch`, `notes`, and the plain values `audienceAgeGroup` (`unknown`, `to12`, `12to17`, `18to20`, `21to29`, `30to39`, `40to49`, `50to64`, `65to84`, `above85`) and `audienceSex` (`male`, `female`) |
+| `lu universe notes` | `overview`, `foundation`, `society`, `conflicts`, `keyLocations`, `storyHooks`, `notes` |
+
+`notes update` changes only the notes it is given, as options
+(`--concept`, `--audience-age-group`, `--key-locations`, `--story-hooks`, ...)
+or as a JSON object in `--file`; an option wins over the file. Markdown or plain
+text replaces a note, and an empty text (or `null` in the file) empties it. A
+text that starts with a dash, such as a Markdown list, needs the
+`--option=value` form or the file. The
+file can be the output of `lu story notes` or `lu universe notes`, edited: its
+`version` becomes the expected version unless `--expected-version` names one,
+and the write fails with `VERSION_CONFLICT` when the notes changed since. A
+note sent back exactly as it was printed is left as stored, so formatting
+Markdown cannot carry (alignment, ruby) survives; a note you change is stored
+as its Markdown reads. The Markdown is the editor's own: a literal `&`, `<` or
+`>` prints as `&amp;`, `&lt;` or `&gt;`, and either form is accepted. Reading needs `story:read` or `universe:read`, and the
+rights to edit the story or to read the universe's drafts.
+
+```sh
+lu story notes STORY_ID > notes.json
+# edit notes.json
+lu story notes update STORY_ID --file notes.json
+```
 
 Encyclopedia input is a JSON object, as the SDK's encyclopedia methods take it:
 
