@@ -248,10 +248,11 @@ the CLI nor a local folder. It connects Claude to the hosted MCP server at
 | `blog` | Blog posts on personal and organization blogs: write, translate, publish. Pages and menus through the `lu` CLI in Claude Code. |
 | `writing-feedback` | Proofreading, tone, consistency, developmental, dialogue and worldbuilding feedback. |
 | `encyclopedia-check` | An entry checked against your chapters. Needs a plan that includes the universe assistant. |
+| `persona` | A role for the conversation: line editor, story editor, continuity checker, brainstorming partner, character coach or worldbuilder. In Claude Code: `/literary-universe:persona brainstorm`. |
 
-The two feedback skills load the in-app assistant's instructions and context
-from the server (`load-writing-skill`, `load-universe-skill`), so they follow
-its changes without a plugin update. The others show you each change and wait
+The two feedback skills and `persona` load the in-app assistant's instructions
+and context from the server (`load-writing-skill`, `load-universe-skill`,
+`load-persona`), so they follow its changes without a plugin update. The others show you each change and wait
 for your approval before saving it.
 
 Install in Claude Code:
