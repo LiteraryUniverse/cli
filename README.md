@@ -205,7 +205,7 @@ contacting the server.
 | --- | --- |
 | `AGENTS.md` | The folder layout, the sync, edit, status, sync loop, the AI disclosure rule (set `ai_model` in every note the agent writes), and the rule that the agent publishes nothing without the author's go-ahead. There is one version for story folders and one for universe folders. |
 | `CLAUDE.md` | `@AGENTS.md`, so Claude Code reads the same instructions. |
-| `.claude/skills/*/SKILL.md` | The `story-review`, `continuity-check` and `world-rules` writing skills. |
+| `.claude/skills/*/SKILL.md` | The `writing-feedback` and `encyclopedia-check` skills, which load the in-app AI Assistant's instructions with `lu assistant`, and the `story-review`, `continuity-check` and `world-rules` writing skills. |
 | `.mcp.json` | Starts `lu mcp` for Claude Code and T3 Code. |
 | `.claude/settings.json` | Pre-approves the `literary-universe` MCP server for Claude Code (merged into an existing file). |
 | `.codex/config.toml` | The same MCP server for Codex in a trusted folder. |
@@ -478,6 +478,26 @@ VERSION_CONFLICT when the series changed meanwhile.
 Every write prints its plan as JSON on stderr before sending it. Removals,
 deletions, entry creation and series saves are never retried; run them again
 only after checking the result.
+
+## AI Assistant skills
+
+The in-app AI Assistant's feedback instructions stay on Literary Universe.
+`lu assistant` loads them with fresh story context, so a local agent gives
+the same feedback:
+
+```sh
+lu assistant writing STORY_ID --skill proofreading [--chapter CHAPTER_ID] [--language LOCALE]
+lu assistant universe UNIVERSE_ID --entry ENTRY_ID [--chapter-offset N]
+```
+
+`--skill` is `proofreading` (grammar, spelling, punctuation and repetition in
+the manuscript language), `tone`, `consistency`, `developmental`, `dialogue`
+or `worldbuilding`. `lu assistant universe` checks one encyclopedia entry
+against the chapters that name it, a page at a time: run it again with the
+`nextChapterOffset` it returns. That check needs a plan that includes the
+universe assistant. Both need a personal sign-in (`lu login` or a personal
+key); organization keys cannot load them. The `writing-feedback` and
+`encyclopedia-check` skills in folders made by `lu init` call these commands.
 
 ## Development
 

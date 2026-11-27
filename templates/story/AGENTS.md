@@ -14,8 +14,8 @@ with their writing.
   `sequence` (from 1) moves it.
 - `.lu/vault.json`: which story and deployment this folder syncs with. Never
   edit it.
-- `.claude/skills/`: writing skills (story review, continuity check, world
-  rules). Stylistic and editorial guidance belongs there, not here.
+- `.claude/skills/`: writing skills (the AI Assistant's feedback and
+  encyclopedia check, story review, continuity check, world rules). Stylistic and editorial guidance belongs there, not here.
 
 Notes without `lu_kind` in their frontmatter are not synced; the author can
 keep their own notes here.

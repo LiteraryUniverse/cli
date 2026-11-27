@@ -247,8 +247,10 @@ test('lu init story syncs into an existing folder and writes the agent workspace
 	assert.deepEqual(report.written.sort(), [
 		'.claude/settings.json',
 		'.claude/skills/continuity-check/SKILL.md',
+		'.claude/skills/encyclopedia-check/SKILL.md',
 		'.claude/skills/story-review/SKILL.md',
 		'.claude/skills/world-rules/SKILL.md',
+		'.claude/skills/writing-feedback/SKILL.md',
 		'.codex/config.toml',
 		'.gitignore',
 		'.mcp.json',
